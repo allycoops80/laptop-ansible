@@ -1,0 +1,292 @@
+---
+# Bootstrap (one-time, on new laptop):
+#   sudo apt install ansible
+#
+# Run:
+#   ansible-playbook -i inventory.ini site.yml -K
+#   ansible-playbook -i inventory.ini site.yml -K --tags git,nodejs,vscode
+
+- name: Laptop developer tools
+  hosts: local
+  connection: local
+  become: true
+
+  vars:
+    the_user: "{{ ansible_user_id }}"
+
+  pre_tasks:
+    - name: Install apt prerequisites
+      apt:
+        name:
+          - curl
+          - gpg
+          - apt-transport-https
+          - ca-certificates
+        update_cache: true
+        state: present
+
+  tasks:
+
+    # ── Git ───────────────────────────────────────────────────────────────
+    - name: Install git
+      apt:
+        name: git
+        state: present
+      tags: git
+
+    # ── Node.js ───────────────────────────────────────────────────────────
+    - name: Install Node.js and npm
+      apt:
+        name:
+          - nodejs
+          - npm
+        state: present
+      tags: nodejs
+
+    # ── VS Code ───────────────────────────────────────────────────────────
+    - name: Download Microsoft GPG key (armoured)
+      get_url:
+        url: https://packages.microsoft.com/keys/microsoft.asc
+        dest: /tmp/microsoft.asc
+        mode: "0644"
+      tags: vscode
+
+    - name: Dearmor Microsoft GPG key
+      shell: gpg --dearmor < /tmp/microsoft.asc > /usr/share/keyrings/microsoft.gpg
+      args:
+        creates: /usr/share/keyrings/microsoft.gpg
+      tags: vscode
+
+    - name: Add VS Code apt repository
+      copy:
+        dest: /etc/apt/sources.list.d/vscode.sources
+        content: |
+          Types: deb
+          URIs: https://packages.microsoft.com/repos/code
+          Suites: stable
+          Components: main
+          Architectures: amd64
+          Signed-By: /usr/share/keyrings/microsoft.gpg
+        mode: "0644"
+      tags: vscode
+
+    - name: Install VS Code
+      apt:
+        name: code
+        update_cache: true
+        state: present
+      tags: vscode
+
+    # ── Slack ─────────────────────────────────────────────────────────────
+    - name: Download Slack (packagecloud) GPG key
+      shell: |
+        curl -fsSL https://packagecloud.io/slacktechnologies/slack/gpgkey \
+          | gpg --dearmor > /usr/share/keyrings/slack.gpg
+      args:
+        creates: /usr/share/keyrings/slack.gpg
+      tags: slack
+
+    - name: Add Slack apt repository
+      copy:
+        dest: /etc/apt/sources.list.d/slack.sources
+        content: |
+          Types: deb
+          URIs: https://packagecloud.io/slacktechnologies/slack/debian/
+          Suites: jessie
+          Components: main
+          Signed-By: /usr/share/keyrings/slack.gpg
+        mode: "0644"
+      tags: slack
+
+    - name: Install Slack
+      apt:
+        name: slack-desktop
+        update_cache: true
+        state: present
+      tags: slack
+
+    # ── Claude Desktop ────────────────────────────────────────────────────
+    # Unofficial Debian packaging: https://github.com/aaddrick/claude-desktop-debian
+    - name: Download Claude Desktop GPG key
+      shell: |
+        curl -fsSL https://aaddrick.github.io/claude-desktop-debian/KEY.gpg \
+          | gpg --dearmor > /usr/share/keyrings/claude-desktop.gpg
+      args:
+        creates: /usr/share/keyrings/claude-desktop.gpg
+      tags: claude_desktop
+
+    - name: Add Claude Desktop apt repository
+      copy:
+        dest: /etc/apt/sources.list.d/claude-desktop.sources
+        content: |
+          Types: deb
+          URIs: https://aaddrick.github.io/claude-desktop-debian/
+          Suites: stable
+          Components: main
+          Signed-By: /usr/share/keyrings/claude-desktop.gpg
+        mode: "0644"
+      tags: claude_desktop
+
+    - name: Install Claude Desktop
+      apt:
+        name: claude-desktop
+        update_cache: true
+        state: present
+      tags: claude_desktop
+
+    # ── Zoom ──────────────────────────────────────────────────────────────
+    # Zoom has no stable apt repo; download the latest .deb directly.
+    - name: Download Zoom deb
+      get_url:
+        url: https://zoom.us/client/latest/zoom_amd64.deb
+        dest: /tmp/zoom_amd64.deb
+        mode: "0644"
+      tags: zoom
+
+    - name: Install Zoom
+      apt:
+        deb: /tmp/zoom_amd64.deb
+      tags: zoom
+
+    # ── Thorium Browser ───────────────────────────────────────────────────
+    # Thorium has no apt repo; fetch the latest .deb from GitHub releases.
+    - name: Get latest Thorium release metadata
+      uri:
+        url: https://api.github.com/repos/Alex313031/Thorium/releases/latest
+        headers:
+          Accept: application/vnd.github.v3+json
+        return_content: true
+      register: thorium_release
+      tags: thorium
+
+    - name: Resolve Thorium deb download URL
+      set_fact:
+        thorium_deb_url: >-
+          {{ thorium_release.json.assets
+             | selectattr('name', 'match', '.*amd64\\.deb$')
+             | map(attribute='browser_download_url')
+             | first }}
+      tags: thorium
+
+    - name: Download Thorium deb
+      get_url:
+        url: "{{ thorium_deb_url }}"
+        dest: /tmp/thorium_amd64.deb
+        mode: "0644"
+      tags: thorium
+
+    - name: Install Thorium Browser
+      apt:
+        deb: /tmp/thorium_amd64.deb
+      tags: thorium
+
+    # ── Obsidian ──────────────────────────────────────────────────────────
+    # No apt repo; fetch the latest .deb from GitHub releases.
+    - name: Get latest Obsidian release metadata
+      uri:
+        url: https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest
+        headers:
+          Accept: application/vnd.github.v3+json
+        return_content: true
+      register: obsidian_release
+      tags: obsidian
+
+    - name: Resolve Obsidian deb download URL
+      set_fact:
+        obsidian_deb_url: >-
+          {{ obsidian_release.json.assets
+             | selectattr('name', 'match', '.*amd64\\.deb$')
+             | map(attribute='browser_download_url')
+             | first }}
+      tags: obsidian
+
+    - name: Download Obsidian deb
+      get_url:
+        url: "{{ obsidian_deb_url }}"
+        dest: /tmp/obsidian_amd64.deb
+        mode: "0644"
+      tags: obsidian
+
+    - name: Install Obsidian
+      apt:
+        deb: /tmp/obsidian_amd64.deb
+      tags: obsidian
+
+    # ── Bitwarden ─────────────────────────────────────────────────────────
+    # No apt repo; Bitwarden's download endpoint redirects to the latest .deb.
+    - name: Download Bitwarden deb
+      get_url:
+        url: https://vault.bitwarden.com/download/?app=desktop&platform=linux&variant=deb
+        dest: /tmp/bitwarden_amd64.deb
+        mode: "0644"
+      tags: bitwarden
+
+    - name: Install Bitwarden
+      apt:
+        deb: /tmp/bitwarden_amd64.deb
+      tags: bitwarden
+
+    - name: Install Bitwarden CLI (bw)
+      npm:
+        name: "@bitwarden/cli"
+        global: true
+      become: false
+      environment:
+        NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
+      tags: bitwarden
+
+    # ── Bitwarden SSH agent ────────────────────────────────────────────────
+    # After install: open Bitwarden → Settings → SSH Agent → enable it,
+    # then add SSH keys as "SSH Key" vault items.
+    # Bitwarden creates the socket at ~/.bitwarden-ssh-agent.sock when running.
+    - name: Configure SSH to use Bitwarden agent socket
+      become: false
+      blockinfile:
+        path: "/home/{{ the_user }}/.ssh/config"
+        create: true
+        mode: "0600"
+        marker: "# {mark} ANSIBLE MANAGED — BITWARDEN SSH AGENT"
+        block: |
+          Host *
+            IdentityAgent ~/.bitwarden-ssh-agent.sock
+      tags: bitwarden
+
+    - name: Export SSH_AUTH_SOCK for Bitwarden agent in .bashrc
+      become: false
+      blockinfile:
+        path: "/home/{{ the_user }}/.bashrc"
+        marker: "# {mark} ANSIBLE MANAGED — BITWARDEN SSH AGENT"
+        block: |
+          export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
+      tags: bitwarden
+
+    # ── AWS config ────────────────────────────────────────────────────────
+    # SSO-only config — no static credentials. After restore, authenticate
+    # with: aws sso login --profile <profile>
+    - name: Create ~/.aws directory
+      become: false
+      file:
+        path: "/home/{{ the_user }}/.aws"
+        state: directory
+        mode: "0700"
+      tags: aws
+
+    - name: Copy AWS config
+      become: false
+      copy:
+        src: files/aws_config
+        dest: "/home/{{ the_user }}/.aws/config"
+        mode: "0600"
+      tags: aws
+
+    # ── Claude Code CLI ───────────────────────────────────────────────────
+    # Installs to npm global prefix (~/.npm-global); claude binary ends up in
+    # ~/.npm-global/bin/ and self-links into ~/.local/share/claude/versions/.
+    - name: Install Claude Code CLI
+      npm:
+        name: "@anthropic-ai/claude-code"
+        global: true
+      become: false
+      environment:
+        NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
+      tags: claude_code

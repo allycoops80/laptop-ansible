@@ -1,0 +1,64 @@
+[sso-session TT_SSO]
+sso_start_url = https://traveltek.awsapps.com/start
+sso_region = us-east-1
+sso_registration_scopes = sso:account:access
+
+[profile production]
+sso_session = TT_SSO
+sso_account_id = 243524501961
+sso_role_name = SystemsProdAccess
+region = eu-west-1
+
+[profile staging]
+sso_session = TT_SSO
+sso_account_id = 311573342321
+sso_role_name = SystemsStageAccess
+region = eu-west-1
+
+[profile development]
+sso_session = TT_SSO
+sso_account_id = 502937263541
+sso_role_name = SystemsDevAccess
+region = eu-west-1
+
+[profile awsroot]
+sso_session = TT_SSO
+sso_account_id = 364695371122
+sso_role_name = SystemsAWSRootAccess
+region = eu-west-1
+
+[profile legacy_traveltek]
+sso_session = TT_SSO
+sso_account_id = 248772781588
+sso_role_name = SystemsProdAccess
+region = eu-west-1
+
+[profile logging]
+sso_session = TT_SSO
+sso_account_id = 737697410754
+sso_role_name = SystemsLoggingAccess
+region = eu-west-1
+
+[profile security]
+sso_session = TT_SSO
+sso_account_id = 585918076761
+sso_role_name = SystemsSecurityAccess
+region = eu-west-1
+
+[profile devops-tests]
+sso_session = TT_SSO
+sso_account_id = 891377088806
+sso_role_name = AdministratorAccess
+region = eu-west-1
+
+[profile shared]
+sso_session = TT_SSO
+sso_account_id = 040853210721
+sso_role_name = SystemsSharedAccess
+region = eu-west-1
+
+[profile legacy_platform]
+sso_session = TT_SSO
+sso_account_id = 137718325687
+sso_role_name = SystemsProdAccess
+region = eu-west-1
