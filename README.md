@@ -26,14 +26,14 @@ SSH agent is configured to use Bitwarden — see [SSH keys](#ssh-keys) below.
 ### One-liner
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alancooper/laptop-ansible/main/bootstrap.sh | bash
+curl -fsSL https://raw.githubusercontent.com/allycoops80/laptop-ansible/main/bootstrap.sh | bash
 ```
 
 ### Or step by step
 
 ```bash
 sudo apt install git
-git clone https://github.com/alancooper/laptop-ansible.git ~/code/laptop-ansible
+git clone https://github.com/allycoops80/laptop-ansible.git ~/code/laptop-ansible
 bash ~/code/laptop-ansible/bootstrap.sh
 ```
 
@@ -94,10 +94,11 @@ Bitwarden will serve the key via the agent socket whenever the desktop app is ru
 
 Update `REPO_URL` in `bootstrap.sh` if the repo is ever moved.
 
-To push changes from an existing machine:
+To push changes from an existing machine (SSH available):
 
 ```bash
 cd ~/code/laptop-ansible
+git remote set-url origin git@github.com:allycoops80/laptop-ansible.git
 git add -p
 git commit -m "your message"
 git push

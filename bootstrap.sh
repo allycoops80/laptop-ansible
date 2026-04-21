@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ── Config ─────────────────────────────────────────────────────────────────
-REPO_URL="https://github.com/alancooper/laptop-ansible.git"   # update before first use
+REPO_URL="https://github.com/allycoops80/laptop-ansible.git"
 REPO_DIR="$HOME/code/laptop-ansible"
 
 # ── Helpers ────────────────────────────────────────────────────────────────
