@@ -281,6 +281,53 @@
           export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
       tags: bitwarden
 
+    # ── OpenTofu ──────────────────────────────────────────────────────────
+    - name: Download OpenTofu native GPG key
+      shell: |
+        curl -fsSL https://get.opentofu.org/opentofu.gpg \
+          > /etc/apt/keyrings/opentofu.gpg
+      args:
+        creates: /etc/apt/keyrings/opentofu.gpg
+      tags: tofu
+
+    - name: Download OpenTofu repo GPG key
+      shell: |
+        curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey \
+          | gpg --no-tty --batch --dearmor -o /etc/apt/keyrings/opentofu-repo.gpg
+      args:
+        creates: /etc/apt/keyrings/opentofu-repo.gpg
+      tags: tofu
+
+    - name: Add OpenTofu apt repository
+      copy:
+        dest: /etc/apt/sources.list.d/opentofu.list
+        content: |
+          deb [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main
+          deb-src [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main
+        mode: "0644"
+      tags: tofu
+
+    - name: Install OpenTofu
+      apt:
+        name: opentofu
+        update_cache: true
+        state: present
+      tags: tofu
+
+    # ── AWS CLI ───────────────────────────────────────────────────────────
+    - name: Install AWS CLI
+      apt:
+        name: awscli
+        state: present
+      tags: awscli
+
+    # ── Tilix ─────────────────────────────────────────────────────────────
+    - name: Install Tilix
+      apt:
+        name: tilix
+        state: present
+      tags: tilix
+
     # ── Claude Code config ────────────────────────────────────────────────
     # config.json (API key) is intentionally excluded — set that manually.
     - name: Create ~/.claude directory

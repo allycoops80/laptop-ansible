@@ -17,6 +17,9 @@ Ansible playbook to provision a new laptop with standard developer tools.
 | Zoom | zoom.us download |
 | Thorium Browser | GitHub releases (Alex313031/Thorium) |
 | Obsidian | GitHub releases (obsidianmd/obsidian-releases) |
+| OpenTofu | packages.opentofu.org apt repo |
+| AWS CLI | apt (Ubuntu universe) |
+| Tilix | apt (Ubuntu universe) |
 | AWS CLI config | files/aws_config (SSO profiles, no credentials) |
 
 SSH agent is configured to use Bitwarden — see [SSH keys](#ssh-keys) below.
@@ -46,7 +49,7 @@ cd ~/code/laptop-ansible
 ansible-playbook -i inventory.ini site.yml -K --tags zoom
 ```
 
-Available tags: `git`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `claude_config`, `bitwarden`, `zoom`, `thorium`, `obsidian`, `aws`, `repos`
+Available tags: `git`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `claude_config`, `bitwarden`, `zoom`, `thorium`, `obsidian`, `tofu`, `awscli`, `tilix`, `aws`, `repos`
 
 ## First-time setup after provisioning
 
