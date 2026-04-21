@@ -216,7 +216,7 @@
       set_fact:
         obsidian_deb_url: >-
           {{ obsidian_release.json.assets
-             | selectattr('name', 'match', '.*amd64\\.deb$')
+             | selectattr('name', 'search', 'amd64.deb')
              | map(attribute='browser_download_url')
              | first }}
       tags: obsidian
