@@ -12,7 +12,7 @@
   become: true
 
   vars:
-    the_user: "{{ ansible_user_id }}"
+    the_user: "{{ lookup('env','USER') }}"
     # Thorium CPU variant — AVX2 suits Intel/AMD since ~2013.
     # Use AVX for older hardware, SSE4/SSE3 for anything pre-2013.
     thorium_variant: "AVX2"
@@ -314,11 +314,32 @@
         state: present
       tags: tofu
 
-    # ── AWS CLI ───────────────────────────────────────────────────────────
-    - name: Install AWS CLI
-      apt:
-        name: awscli
-        state: present
+    - name: Install AWS CLI v2
+      block:
+        - name: Ensure unzip is present
+          ansible.builtin.apt:
+            name: unzip
+            state: present
+            update_cache: yes
+          become: true
+
+        - name: Download AWS CLI v2 installer
+          ansible.builtin.get_url:
+            url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_architecture }}.zip"
+            dest: /tmp/awscliv2.zip
+            mode: "0644"
+
+        - name: Unpack installer
+          ansible.builtin.unarchive:
+            src: /tmp/awscliv2.zip
+            dest: /tmp/
+            remote_src: yes
+
+        - name: Run AWS CLI installer
+          ansible.builtin.command: /tmp/aws/install --update
+          args:
+            creates: /usr/local/bin/aws
+          become: true
       tags: awscli
 
     # ── Tilix ─────────────────────────────────────────────────────────────
@@ -327,6 +348,37 @@
         name: tilix
         state: present
       tags: tilix
+
+    # ── Claude Code install ───────────────────────────────────────────────
+    - name: Install Claude Code CLI
+      become: false
+      block:
+        - name: Ensure per-user npm prefix exists
+          become: false
+          ansible.builtin.file:
+            path: "{{ npm_prefix }}"
+            state: directory
+            mode: "0755"
+
+        - name: Install @anthropic-ai/claude-code globally (per-user)
+          become: false
+          community.general.npm:
+            name: "@anthropic-ai/claude-code"
+            global: true
+            state: latest
+          environment:
+            NPM_CONFIG_PREFIX: "{{ npm_prefix }}"
+
+    - name: Ensure ~/.npm-global/bin is on PATH in .bashrc
+      ansible.builtin.lineinfile:
+        path: "{{ lookup('env','HOME') }}/.bashrc"
+        line: 'export PATH="$HOME/.npm-global/bin:$PATH"'
+        regexp: '\.npm-global/bin'
+        state: present
+
+      vars:
+        npm_prefix: "{{ lookup('env','HOME') }}/.npm-global"
+      tags: claude_code
 
     # ── Claude Code config ────────────────────────────────────────────────
     # config.json (API key) is intentionally excluded — set that manually.
