@@ -13,6 +13,9 @@
 
   vars:
     the_user: "{{ ansible_user_id }}"
+    # Thorium CPU variant — AVX2 suits Intel/AMD since ~2013.
+    # Use AVX for older hardware, SSE4/SSE3 for anything pre-2013.
+    thorium_variant: "AVX2"
     repos:
       # Traveltek
       - git@github.com:Traveltek/app-travelshops.git
@@ -181,7 +184,7 @@
       set_fact:
         thorium_deb_url: >-
           {{ thorium_release.json.assets
-             | selectattr('name', 'match', '.*amd64\\.deb$')
+             | selectattr('name', 'match', '.*_' + thorium_variant + '\\.deb$')
              | map(attribute='browser_download_url')
              | first }}
       tags: thorium
