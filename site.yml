@@ -184,7 +184,7 @@
       set_fact:
         thorium_deb_url: >-
           {{ thorium_release.json.assets
-             | selectattr('name', 'match', '.*_' + thorium_variant + '\\.deb$')
+             | selectattr('name', 'search', '_' + thorium_variant + '.deb')
              | map(attribute='browser_download_url')
              | first }}
       tags: thorium
