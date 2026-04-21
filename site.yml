@@ -309,7 +309,7 @@
 
     - name: Install OpenTofu
       apt:
-        name: opentofu
+        name: tofu
         update_cache: true
         state: present
       tags: tofu
