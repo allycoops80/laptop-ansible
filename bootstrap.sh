@@ -29,4 +29,7 @@ fi
 # ── Playbook ───────────────────────────────────────────────────────────────
 info "Running playbook (you will be prompted for your sudo password)..."
 cd "$REPO_DIR"
-ansible-playbook -i inventory.ini site.yml -K
+# bitwarden and repos are excluded — run those manually after SSH agent setup:
+#   ansible-playbook -i inventory.ini site.yml -K --tags bitwarden
+#   ansible-playbook -i inventory.ini site.yml -K --tags repos
+ansible-playbook -i inventory.ini site.yml -K --skip-tags bitwarden,repos
