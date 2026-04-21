@@ -42,11 +42,10 @@ bash ~/code/laptop-ansible/bootstrap.sh
 
 The script installs `git` and `ansible` via apt, clones this repo, then runs the playbook. You will be prompted once for your sudo password.
 
-Bitwarden and repository cloning are skipped during bootstrap — run these manually once the SSH agent is configured:
+Repository cloning is skipped during bootstrap (SSH agent must be configured first). Run manually once Bitwarden is set up:
 
 ```bash
 cd ~/code/laptop-ansible
-ansible-playbook -i inventory.ini site.yml -K --tags bitwarden
 ansible-playbook -i inventory.ini site.yml -K --tags repos
 ```
 
