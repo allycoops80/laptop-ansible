@@ -46,9 +46,17 @@ cd ~/code/laptop-ansible
 ansible-playbook -i inventory.ini site.yml -K --tags zoom
 ```
 
-Available tags: `git`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `bitwarden`, `zoom`, `thorium`, `obsidian`, `aws`
+Available tags: `git`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `bitwarden`, `zoom`, `thorium`, `obsidian`, `aws`, `repos`
 
 ## First-time setup after provisioning
+
+### Repositories
+
+Most repos use SSH remotes, so Bitwarden SSH agent must be running and unlocked first. Run as a separate step once Bitwarden is set up:
+
+```bash
+ansible-playbook -i inventory.ini site.yml -K --tags repos
+```
 
 ### AWS
 

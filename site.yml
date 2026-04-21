@@ -13,6 +13,24 @@
 
   vars:
     the_user: "{{ ansible_user_id }}"
+    repos:
+      # Traveltek
+      - git@github.com:Traveltek/app-travelshops.git
+      - git@github.com:Traveltek/aws-infrastructure-glasgow.git
+      - git@github.com:Traveltek/aws-cost-management-resources.git
+      - git@github.com:Traveltek/codename-london.git
+      - git@github.com:Traveltek/config-aws-infrastructure.git
+      - git@github.com:Traveltek/config-server-traveltek-eu1.git
+      - git@github.com:Traveltek/config-userdata-org.git
+      - git@github.com:Traveltek/devops-codebuild-automation.git
+      - git@github.com:Traveltek/devops-tooling.git
+      - git@github.com:Traveltek/claude-integrations.git
+      - git@github.com:Traveltekv2/vervotech-sync.git
+      # Personal
+      - git@github.com:allycoops80/bedrock-support-agent.git
+      - git@github.com:allycoops80/support-agent.git
+      # Public
+      - https://github.com/awslabs/aidlc-workflows.git
 
   pre_tasks:
     - name: Install apt prerequisites
@@ -290,3 +308,25 @@
       environment:
         NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
       tags: claude_code
+
+    # ── Repositories ──────────────────────────────────────────────────────
+    # Requires Bitwarden SSH agent to be running and unlocked for SSH repos.
+    # Run separately after completing Bitwarden setup:
+    #   ansible-playbook -i inventory.ini site.yml -K --tags repos
+    - name: Create ~/code directory
+      become: false
+      file:
+        path: "/home/{{ the_user }}/code"
+        state: directory
+        mode: "0755"
+      tags: repos
+
+    - name: Clone repositories
+      become: false
+      git:
+        repo: "{{ item }}"
+        dest: "/home/{{ the_user }}/code/{{ item | regex_replace('.*/', '') | regex_replace('\\.git$', '') }}"
+        clone: true
+        update: false
+      loop: "{{ repos }}"
+      tags: repos
