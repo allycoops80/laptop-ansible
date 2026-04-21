@@ -46,7 +46,7 @@ cd ~/code/laptop-ansible
 ansible-playbook -i inventory.ini site.yml -K --tags zoom
 ```
 
-Available tags: `git`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `bitwarden`, `zoom`, `thorium`, `obsidian`, `aws`, `repos`
+Available tags: `git`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `claude_config`, `bitwarden`, `zoom`, `thorium`, `obsidian`, `aws`, `repos`
 
 ## First-time setup after provisioning
 

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(aws --profile legacy_platform cloudwatch describe-alarms --query 'MetricAlarms[].{Name:AlarmName,Namespace:Namespace}' --output table)",
+      "Bash(aws:*)",
+      "Bash(python3 -c ':*)",
+      "mcp__atlassian__getJiraIssueTypeMetaWithFields",
+      "mcp__plugin_claude-mem_mcp-search__get_observations",
+      "Bash(wait)",
+      "WebFetch(domain:aws.amazon.com)",
+      "mcp__prowler-local__prowler_app_get_finding_details",
+      "mcp__atlassian__lookupJiraAccountId",
+      "mcp__atlassian__addCommentToJiraIssue",
+      "Bash(apt-cache policy *)",
+      "Read(//etc/apt/sources.list.d/**)",
+      "Read(//usr/share/keyrings/**)",
+      "Bash(npm config *)"
+    ]
+  }
+}

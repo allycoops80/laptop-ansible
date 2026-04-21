@@ -281,6 +281,32 @@
           export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
       tags: bitwarden
 
+    # ── Claude Code config ────────────────────────────────────────────────
+    # config.json (API key) is intentionally excluded — set that manually.
+    - name: Create ~/.claude directory
+      become: false
+      file:
+        path: "/home/{{ the_user }}/.claude"
+        state: directory
+        mode: "0755"
+      tags: claude_config
+
+    - name: Copy Claude Code settings.json
+      become: false
+      copy:
+        src: files/claude_settings.json
+        dest: "/home/{{ the_user }}/.claude/settings.json"
+        mode: "0644"
+      tags: claude_config
+
+    - name: Copy Claude Code settings.local.json
+      become: false
+      copy:
+        src: files/claude_settings.local.json
+        dest: "/home/{{ the_user }}/.claude/settings.local.json"
+        mode: "0644"
+      tags: claude_config
+
     # ── AWS config ────────────────────────────────────────────────────────
     # SSO-only config — no static credentials. After restore, authenticate
     # with: aws sso login --profile <profile>
