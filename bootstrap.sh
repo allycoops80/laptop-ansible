@@ -27,8 +27,13 @@ else
 fi
 
 # ── Playbook ───────────────────────────────────────────────────────────────
-info "Running playbook (you will be prompted for your sudo password)..."
+info "Running playbook..."
 cd "$REPO_DIR"
+# Capture the real username before sudo resets $USER to root.
+# become_method=su lets root su to any user without a password (pam_rootok.so),
+# bypassing the sudo prompt-matching issues on this system.
 # repos is excluded — SSH agent must be set up first. Run manually after Bitwarden:
-#   ansible-playbook -i inventory.ini site.yml -K --tags repos
-ansible-playbook -i inventory.ini site.yml -K --skip-tags repos
+#   sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER" --tags repos
+sudo ansible-playbook -i inventory.ini site.yml \
+    -e "the_user=$USER" \
+    --skip-tags repos

@@ -248,10 +248,11 @@
       tags: bitwarden
 
     - name: Install Bitwarden CLI (bw)
+      become: true
+      become_user: "{{ the_user }}"
       npm:
         name: "@bitwarden/cli"
         global: true
-      become: false
       environment:
         NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
       tags: bitwarden
@@ -261,7 +262,8 @@
     # then add SSH keys as "SSH Key" vault items.
     # Bitwarden creates the socket at ~/.bitwarden-ssh-agent.sock when running.
     - name: Configure SSH to use Bitwarden agent socket
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       blockinfile:
         path: "/home/{{ the_user }}/.ssh/config"
         create: true
@@ -273,7 +275,8 @@
       tags: bitwarden
 
     - name: Export SSH_AUTH_SOCK for Bitwarden agent in .bashrc
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       blockinfile:
         path: "/home/{{ the_user }}/.bashrc"
         marker: "# {mark} ANSIBLE MANAGED — BITWARDEN SSH AGENT"
@@ -350,40 +353,50 @@
       tags: tilix
 
     # ── Claude Code install ───────────────────────────────────────────────
-    - name: Install Claude Code CLI
-      become: false
-      block:
-        - name: Ensure per-user npm prefix exists
-          become: false
-          ansible.builtin.file:
-            path: "{{ npm_prefix }}"
-            state: directory
-            mode: "0755"
+    - name: Ensure per-user npm prefix exists
+      become: true
+      become_user: "{{ the_user }}"
+      ansible.builtin.file:
+        path: "/home/{{ the_user }}/.npm-global"
+        state: directory
+        mode: "0755"
+      tags: claude_code
 
-        - name: Install @anthropic-ai/claude-code globally (per-user)
-          become: false
-          community.general.npm:
-            name: "@anthropic-ai/claude-code"
-            global: true
-            state: latest
-          environment:
-            NPM_CONFIG_PREFIX: "{{ npm_prefix }}"
+    - name: Fix ownership of ~/.npm cache (may be root-owned from earlier runs)
+      file:
+        path: "/home/{{ the_user }}/.npm"
+        owner: "{{ the_user }}"
+        group: "{{ the_user }}"
+        recurse: true
+        state: directory
+      tags: claude_code
+
+    - name: Install @anthropic-ai/claude-code globally (per-user)
+      become: true
+      become_user: "{{ the_user }}"
+      community.general.npm:
+        name: "@anthropic-ai/claude-code"
+        global: true
+        state: latest
+      environment:
+        NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
+      tags: claude_code
 
     - name: Ensure ~/.npm-global/bin is on PATH in .bashrc
+      become: true
+      become_user: "{{ the_user }}"
       ansible.builtin.lineinfile:
-        path: "{{ lookup('env','HOME') }}/.bashrc"
+        path: "/home/{{ the_user }}/.bashrc"
         line: 'export PATH="$HOME/.npm-global/bin:$PATH"'
         regexp: '\.npm-global/bin'
         state: present
-
-      vars:
-        npm_prefix: "{{ lookup('env','HOME') }}/.npm-global"
       tags: claude_code
 
     # ── Claude Code config ────────────────────────────────────────────────
     # config.json (API key) is intentionally excluded — set that manually.
     - name: Create ~/.claude directory
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       file:
         path: "/home/{{ the_user }}/.claude"
         state: directory
@@ -391,7 +404,8 @@
       tags: claude_config
 
     - name: Copy Claude Code settings.json
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       copy:
         src: files/claude_settings.json
         dest: "/home/{{ the_user }}/.claude/settings.json"
@@ -399,7 +413,8 @@
       tags: claude_config
 
     - name: Copy Claude Code settings.local.json
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       copy:
         src: files/claude_settings.local.json
         dest: "/home/{{ the_user }}/.claude/settings.local.json"
@@ -410,7 +425,8 @@
     # SSO-only config — no static credentials. After restore, authenticate
     # with: aws sso login --profile <profile>
     - name: Create ~/.aws directory
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       file:
         path: "/home/{{ the_user }}/.aws"
         state: directory
@@ -418,7 +434,8 @@
       tags: aws
 
     - name: Copy AWS config
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       copy:
         src: files/aws_config
         dest: "/home/{{ the_user }}/.aws/config"
@@ -432,7 +449,8 @@
       npm:
         name: "@anthropic-ai/claude-code"
         global: true
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       environment:
         NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
       tags: claude_code
@@ -442,7 +460,8 @@
     # Run separately after completing Bitwarden setup:
     #   ansible-playbook -i inventory.ini site.yml -K --tags repos
     - name: Create ~/code directory
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       file:
         path: "/home/{{ the_user }}/code"
         state: directory
@@ -450,7 +469,8 @@
       tags: repos
 
     - name: Clone repositories
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       git:
         repo: "{{ item }}"
         dest: "/home/{{ the_user }}/code/{{ item | regex_replace('.*/', '') | regex_replace('\\.git$', '') }}"
