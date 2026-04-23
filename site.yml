@@ -259,11 +259,11 @@
       tags: bitwarden
 
     - name: Install Bitwarden CLI (bw)
+      become: true
+      become_user: "{{ the_user }}"
       npm:
         name: "@bitwarden/cli"
         global: true
-      become: true
-      become_user: "{{ the_user }}"
       environment:
         NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
       tags: bitwarden
@@ -479,6 +479,19 @@
         dest: "/home/{{ the_user }}/.aws/config"
         mode: "0600"
       tags: aws
+
+    # ── Claude Code CLI ───────────────────────────────────────────────────
+    # Installs to npm global prefix (~/.npm-global); claude binary ends up in
+    # ~/.npm-global/bin/ and self-links into ~/.local/share/claude/versions/.
+    - name: Install Claude Code CLI
+      npm:
+        name: "@anthropic-ai/claude-code"
+        global: true
+      become: true
+      become_user: "{{ the_user }}"
+      environment:
+        NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
+      tags: claude_code
 
     # ── Repositories ──────────────────────────────────────────────────────
     # Requires Bitwarden SSH agent to be running and unlocked for SSH repos.
