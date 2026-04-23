@@ -1,10 +1,10 @@
 ---
 # Bootstrap (one-time, on new laptop):
-#   sudo apt install ansible
+#   bash bootstrap.sh
 #
-# Run:
-#   ansible-playbook -i inventory.ini site.yml -K
-#   ansible-playbook -i inventory.ini site.yml -K --tags git,nodejs,vscode
+# Run (pass the_user so sudo doesn't shadow $USER with root):
+#   sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER"
+#   sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER" --tags git,nodejs,vscode
 
 - name: Laptop developer tools
   hosts: local
@@ -12,7 +12,7 @@
   become: true
 
   vars:
-    the_user: "{{ lookup('env','USER') }}"
+    the_user: "{{ lookup('env','SUDO_USER') | default(lookup('env','USER'), true) }}"
     # Thorium CPU variant — AVX2 suits Intel/AMD since ~2013.
     # Use AVX for older hardware, SSE4/SSE3 for anything pre-2013.
     thorium_variant: "AVX2"
@@ -36,6 +36,11 @@
       - https://github.com/awslabs/aidlc-workflows.git
 
   pre_tasks:
+    - name: Verify the_user is set correctly
+      fail:
+        msg: "the_user resolved to '{{ the_user }}' — run with: sudo ansible-playbook ... -e \"the_user=$USER\""
+      when: the_user == 'root' or the_user == ''
+
     - name: Install apt prerequisites
       apt:
         name:
@@ -105,6 +110,12 @@
           | gpg --dearmor > /usr/share/keyrings/slack.gpg
       args:
         creates: /usr/share/keyrings/slack.gpg
+      tags: slack
+
+    - name: Remove legacy Slack apt list file
+      file:
+        path: /etc/apt/sources.list.d/slack.list
+        state: absent
       tags: slack
 
     - name: Add Slack apt repository
@@ -251,7 +262,8 @@
       npm:
         name: "@bitwarden/cli"
         global: true
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       environment:
         NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
       tags: bitwarden
@@ -261,7 +273,8 @@
     # then add SSH keys as "SSH Key" vault items.
     # Bitwarden creates the socket at ~/.bitwarden-ssh-agent.sock when running.
     - name: Configure SSH to use Bitwarden agent socket
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       blockinfile:
         path: "/home/{{ the_user }}/.ssh/config"
         create: true
@@ -273,7 +286,8 @@
       tags: bitwarden
 
     - name: Export SSH_AUTH_SOCK for Bitwarden agent in .bashrc
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       blockinfile:
         path: "/home/{{ the_user }}/.bashrc"
         marker: "# {mark} ANSIBLE MANAGED — BITWARDEN SSH AGENT"
@@ -321,11 +335,10 @@
             name: unzip
             state: present
             update_cache: yes
-          become: true
 
         - name: Download AWS CLI v2 installer
           ansible.builtin.get_url:
-            url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_architecture }}.zip"
+            url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_facts['architecture'] }}.zip"
             dest: /tmp/awscliv2.zip
             mode: "0644"
 
@@ -339,8 +352,36 @@
           ansible.builtin.command: /tmp/aws/install --update
           args:
             creates: /usr/local/bin/aws
-          become: true
       tags: awscli
+
+    # ── OpenVPN 3 ────────────────────────────────────────────────────────
+    - name: Download OpenVPN 3 GPG key
+      shell: |
+        curl -fsSL https://packages.openvpn.net/packages-repo.gpg \
+          | gpg --dearmor > /etc/apt/keyrings/openvpn.gpg
+      args:
+        creates: /etc/apt/keyrings/openvpn.gpg
+      tags: openvpn3
+
+    - name: Add OpenVPN 3 apt repository
+      copy:
+        dest: /etc/apt/sources.list.d/openvpn3.sources
+        content: |
+          Types: deb
+          URIs: https://packages.openvpn.net/openvpn3/debian
+          Suites: {{ ansible_distribution_release }}
+          Components: main
+          Architectures: amd64
+          Signed-By: /etc/apt/keyrings/openvpn.gpg
+        mode: "0644"
+      tags: openvpn3
+
+    - name: Install OpenVPN 3
+      apt:
+        name: openvpn3
+        update_cache: true
+        state: present
+      tags: openvpn3
 
     # ── Tilix ─────────────────────────────────────────────────────────────
     - name: Install Tilix
@@ -350,40 +391,50 @@
       tags: tilix
 
     # ── Claude Code install ───────────────────────────────────────────────
-    - name: Install Claude Code CLI
-      become: false
-      block:
-        - name: Ensure per-user npm prefix exists
-          become: false
-          ansible.builtin.file:
-            path: "{{ npm_prefix }}"
-            state: directory
-            mode: "0755"
+    - name: Ensure per-user npm prefix exists
+      become: true
+      become_user: "{{ the_user }}"
+      ansible.builtin.file:
+        path: "/home/{{ the_user }}/.npm-global"
+        state: directory
+        mode: "0755"
+      tags: claude_code
 
-        - name: Install @anthropic-ai/claude-code globally (per-user)
-          become: false
-          community.general.npm:
-            name: "@anthropic-ai/claude-code"
-            global: true
-            state: latest
-          environment:
-            NPM_CONFIG_PREFIX: "{{ npm_prefix }}"
+    - name: Fix ownership of ~/.npm cache (may be root-owned from earlier runs)
+      file:
+        path: "/home/{{ the_user }}/.npm"
+        owner: "{{ the_user }}"
+        group: "{{ the_user }}"
+        recurse: true
+        state: directory
+      tags: claude_code
+
+    - name: Install @anthropic-ai/claude-code globally (per-user)
+      become: true
+      become_user: "{{ the_user }}"
+      community.general.npm:
+        name: "@anthropic-ai/claude-code"
+        global: true
+        state: latest
+      environment:
+        NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
+      tags: claude_code
 
     - name: Ensure ~/.npm-global/bin is on PATH in .bashrc
+      become: true
+      become_user: "{{ the_user }}"
       ansible.builtin.lineinfile:
-        path: "{{ lookup('env','HOME') }}/.bashrc"
+        path: "/home/{{ the_user }}/.bashrc"
         line: 'export PATH="$HOME/.npm-global/bin:$PATH"'
         regexp: '\.npm-global/bin'
         state: present
-
-      vars:
-        npm_prefix: "{{ lookup('env','HOME') }}/.npm-global"
       tags: claude_code
 
     # ── Claude Code config ────────────────────────────────────────────────
     # config.json (API key) is intentionally excluded — set that manually.
     - name: Create ~/.claude directory
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       file:
         path: "/home/{{ the_user }}/.claude"
         state: directory
@@ -391,7 +442,8 @@
       tags: claude_config
 
     - name: Copy Claude Code settings.json
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       copy:
         src: files/claude_settings.json
         dest: "/home/{{ the_user }}/.claude/settings.json"
@@ -399,7 +451,8 @@
       tags: claude_config
 
     - name: Copy Claude Code settings.local.json
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       copy:
         src: files/claude_settings.local.json
         dest: "/home/{{ the_user }}/.claude/settings.local.json"
@@ -410,7 +463,8 @@
     # SSO-only config — no static credentials. After restore, authenticate
     # with: aws sso login --profile <profile>
     - name: Create ~/.aws directory
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       file:
         path: "/home/{{ the_user }}/.aws"
         state: directory
@@ -418,31 +472,21 @@
       tags: aws
 
     - name: Copy AWS config
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       copy:
         src: files/aws_config
         dest: "/home/{{ the_user }}/.aws/config"
         mode: "0600"
       tags: aws
 
-    # ── Claude Code CLI ───────────────────────────────────────────────────
-    # Installs to npm global prefix (~/.npm-global); claude binary ends up in
-    # ~/.npm-global/bin/ and self-links into ~/.local/share/claude/versions/.
-    - name: Install Claude Code CLI
-      npm:
-        name: "@anthropic-ai/claude-code"
-        global: true
-      become: false
-      environment:
-        NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
-      tags: claude_code
-
     # ── Repositories ──────────────────────────────────────────────────────
     # Requires Bitwarden SSH agent to be running and unlocked for SSH repos.
     # Run separately after completing Bitwarden setup:
-    #   ansible-playbook -i inventory.ini site.yml -K --tags repos
+    #   sudo -E ansible-playbook -i inventory.ini site.yml --tags repos
     - name: Create ~/code directory
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       file:
         path: "/home/{{ the_user }}/code"
         state: directory
@@ -450,7 +494,8 @@
       tags: repos
 
     - name: Clone repositories
-      become: false
+      become: true
+      become_user: "{{ the_user }}"
       git:
         repo: "{{ item }}"
         dest: "/home/{{ the_user }}/code/{{ item | regex_replace('.*/', '') | regex_replace('\\.git$', '') }}"

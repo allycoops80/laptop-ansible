@@ -9,7 +9,7 @@ REPO_DIR="$HOME/code/laptop-ansible"
 info()  { echo "==> $*"; }
 abort() { echo "ERROR: $*" >&2; exit 1; }
 
-[[ $EUID -eq 0 ]] && abort "Run as your normal user, not root (the playbook uses sudo internally)."
+[[ $EUID -eq 0 ]] && abort "Run as your normal user, not root (sudo is invoked internally)."
 
 # ── Prerequisites ──────────────────────────────────────────────────────────
 info "Installing git and ansible..."
@@ -27,8 +27,11 @@ else
 fi
 
 # ── Playbook ───────────────────────────────────────────────────────────────
-info "Running playbook (you will be prompted for your sudo password)..."
+info "Running playbook..."
 cd "$REPO_DIR"
+# Capture the real username now — sudo resets $USER to root in the child process.
 # repos is excluded — SSH agent must be set up first. Run manually after Bitwarden:
-#   ansible-playbook -i inventory.ini site.yml -K --tags repos
-ansible-playbook -i inventory.ini site.yml -K --skip-tags repos
+#   sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER" --tags repos
+sudo ansible-playbook -i inventory.ini site.yml \
+    -e "the_user=$USER" \
+    --skip-tags repos
