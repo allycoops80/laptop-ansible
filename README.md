@@ -6,8 +6,9 @@ Ansible playbook to provision a new laptop with standard developer tools.
 
 | Tool | Method |
 |---|---|
-| git | apt (Ubuntu) |
-| Node.js + npm | apt (Ubuntu) |
+| git | apt |
+| GitHub CLI (`gh`) | cli.github.com apt repo |
+| Node.js + npm | apt |
 | VS Code | Microsoft apt repo |
 | Slack | Packagecloud apt repo |
 | Claude Desktop | aaddrick unofficial Debian repo |
@@ -18,8 +19,10 @@ Ansible playbook to provision a new laptop with standard developer tools.
 | Thorium Browser | GitHub releases (Alex313031/Thorium) |
 | Obsidian | GitHub releases (obsidianmd/obsidian-releases) |
 | OpenTofu | packages.opentofu.org apt repo |
-| AWS CLI | apt (Ubuntu universe) |
-| Tilix | apt (Ubuntu universe) |
+| OpenVPN 3 | packages.openvpn.net apt repo |
+| AWS CLI v2 | awscli.amazonaws.com installer |
+| AWS CDK | npm (`aws-cdk`) |
+| Tilix | apt |
 | AWS CLI config | files/aws_config (SSO profiles, no credentials) |
 
 SSH agent is configured to use Bitwarden — see [SSH keys](#ssh-keys) below.
@@ -40,23 +43,27 @@ git clone https://github.com/allycoops80/laptop-ansible.git ~/code/laptop-ansibl
 bash ~/code/laptop-ansible/bootstrap.sh
 ```
 
-The script installs `git` and `ansible` via apt, clones this repo, then runs the playbook. You will be prompted once for your sudo password.
+The script installs `git` and `ansible` via apt, clones this repo, then runs the playbook under `sudo`. You will be prompted once for your sudo password.
 
 Repository cloning is skipped during bootstrap (SSH agent must be configured first). Run manually once Bitwarden is set up:
 
 ```bash
 cd ~/code/laptop-ansible
-ansible-playbook -i inventory.ini site.yml -K --tags repos
+sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER" --tags repos
 ```
 
 ### Run a single component
 
 ```bash
 cd ~/code/laptop-ansible
-ansible-playbook -i inventory.ini site.yml -K --tags zoom
+sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER" --tags zoom
 ```
 
-Available tags: `git`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `claude_config`, `bitwarden`, `zoom`, `thorium`, `obsidian`, `tofu`, `awscli`, `tilix`, `aws`, `repos`
+Available tags: `git`, `gh`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `claude_config`, `bitwarden`, `zoom`, `thorium`, `obsidian`, `tofu`, `openvpn3`, `awscli`, `awscdk`, `tilix`, `aws`, `repos`
+
+## Why `sudo ansible-playbook` instead of `ansible-playbook -K`
+
+This system's sudo/PAM configuration wraps Ansible's custom prompt in a format Ansible can't pattern-match, causing `-K` to time out. The workaround is to run the whole playbook as root (`sudo`) and use `become_method = su` for privilege operations — root can `su` to any user without a password via `pam_rootok.so`. The `the_user=$USER` variable must be passed explicitly because `sudo` resets `$USER` to `root` in the child process.
 
 ## First-time setup after provisioning
 
@@ -65,7 +72,7 @@ Available tags: `git`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_co
 Most repos use SSH remotes, so Bitwarden SSH agent must be running and unlocked first. Run as a separate step once Bitwarden is set up:
 
 ```bash
-ansible-playbook -i inventory.ini site.yml -K --tags repos
+sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER" --tags repos
 ```
 
 ### AWS
@@ -109,8 +116,6 @@ print(json.dumps(item))
 Bitwarden will serve the key via the agent socket whenever the desktop app is running and unlocked.
 
 ## Maintaining this repo
-
-Update `REPO_URL` in `bootstrap.sh` if the repo is ever moved.
 
 To push changes from an existing machine (SSH available):
 
