@@ -1,10 +1,10 @@
 ---
 # Bootstrap (one-time, on new laptop):
-#   sudo apt install ansible
+#   bash bootstrap.sh
 #
-# Run:
-#   ansible-playbook -i inventory.ini site.yml -K
-#   ansible-playbook -i inventory.ini site.yml -K --tags git,nodejs,vscode
+# Run (pass the_user so sudo doesn't shadow $USER with root):
+#   sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER"
+#   sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER" --tags git,nodejs,vscode
 
 - name: Laptop developer tools
   hosts: local
@@ -12,7 +12,7 @@
   become: true
 
   vars:
-    the_user: "{{ lookup('env','USER') }}"
+    the_user: "{{ lookup('env','SUDO_USER') | default(lookup('env','USER'), true) }}"
     # Thorium CPU variant — AVX2 suits Intel/AMD since ~2013.
     # Use AVX for older hardware, SSE4/SSE3 for anything pre-2013.
     thorium_variant: "AVX2"
@@ -36,6 +36,11 @@
       - https://github.com/awslabs/aidlc-workflows.git
 
   pre_tasks:
+    - name: Verify the_user is set correctly
+      fail:
+        msg: "the_user resolved to '{{ the_user }}' — run with: sudo ansible-playbook ... -e \"the_user=$USER\""
+      when: the_user == 'root' or the_user == ''
+
     - name: Install apt prerequisites
       apt:
         name:
@@ -105,6 +110,12 @@
           | gpg --dearmor > /usr/share/keyrings/slack.gpg
       args:
         creates: /usr/share/keyrings/slack.gpg
+      tags: slack
+
+    - name: Remove legacy Slack apt list file
+      file:
+        path: /etc/apt/sources.list.d/slack.list
+        state: absent
       tags: slack
 
     - name: Add Slack apt repository
@@ -324,11 +335,10 @@
             name: unzip
             state: present
             update_cache: yes
-          become: true
 
         - name: Download AWS CLI v2 installer
           ansible.builtin.get_url:
-            url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_architecture }}.zip"
+            url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_facts['architecture'] }}.zip"
             dest: /tmp/awscliv2.zip
             mode: "0644"
 
@@ -342,8 +352,36 @@
           ansible.builtin.command: /tmp/aws/install --update
           args:
             creates: /usr/local/bin/aws
-          become: true
       tags: awscli
+
+    # ── OpenVPN 3 ────────────────────────────────────────────────────────
+    - name: Download OpenVPN 3 GPG key
+      shell: |
+        curl -fsSL https://packages.openvpn.net/packages-repo.gpg \
+          | gpg --dearmor > /etc/apt/keyrings/openvpn.gpg
+      args:
+        creates: /etc/apt/keyrings/openvpn.gpg
+      tags: openvpn3
+
+    - name: Add OpenVPN 3 apt repository
+      copy:
+        dest: /etc/apt/sources.list.d/openvpn3.sources
+        content: |
+          Types: deb
+          URIs: https://packages.openvpn.net/openvpn3/debian
+          Suites: {{ ansible_distribution_release }}
+          Components: main
+          Architectures: amd64
+          Signed-By: /etc/apt/keyrings/openvpn.gpg
+        mode: "0644"
+      tags: openvpn3
+
+    - name: Install OpenVPN 3
+      apt:
+        name: openvpn3
+        update_cache: true
+        state: present
+      tags: openvpn3
 
     # ── Tilix ─────────────────────────────────────────────────────────────
     - name: Install Tilix
@@ -458,7 +496,7 @@
     # ── Repositories ──────────────────────────────────────────────────────
     # Requires Bitwarden SSH agent to be running and unlocked for SSH repos.
     # Run separately after completing Bitwarden setup:
-    #   ansible-playbook -i inventory.ini site.yml -K --tags repos
+    #   sudo -E ansible-playbook -i inventory.ini site.yml --tags repos
     - name: Create ~/code directory
       become: true
       become_user: "{{ the_user }}"
