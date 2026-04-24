@@ -60,6 +60,18 @@
         state: present
       tags: git
 
+    - name: Configure git identity
+      community.general.git_config:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        scope: global
+      become: true
+      become_user: "{{ the_user }}"
+      loop:
+        - { name: user.name,  value: "Alan Cooper" }
+        - { name: user.email, value: "alancooper@traveltek.net" }
+      tags: git
+
     # ── GitHub CLI ───────────────────────────────────────────────────────
     - name: Download GitHub CLI GPG key
       shell: |
@@ -182,7 +194,7 @@
         dest: /etc/apt/sources.list.d/claude-desktop.sources
         content: |
           Types: deb
-          URIs: https://aaddrick.github.io/claude-desktop-debian/
+          URIs: https://pkg.claude-desktop-debian.dev
           Suites: stable
           Components: main
           Signed-By: /usr/share/keyrings/claude-desktop.gpg
@@ -399,12 +411,13 @@
         content: |
           Types: deb
           URIs: https://packages.openvpn.net/openvpn3/debian
-          Suites: {{ ansible_distribution_release }}
+          Suites: noble
           Components: main
           Architectures: amd64
           Signed-By: /etc/apt/keyrings/openvpn.gpg
         mode: "0644"
       tags: openvpn3
+      # Ubuntu 26.04 (resolute) not yet in OpenVPN repo; noble packages are compatible
 
     - name: Install OpenVPN 3
       apt:
