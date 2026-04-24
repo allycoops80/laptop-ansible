@@ -571,3 +571,13 @@
         update: false
       loop: "{{ repos }}"
       tags: repos
+
+    - name: Set laptop-ansible remote to SSH
+      become: true
+      become_user: "{{ the_user }}"
+      community.general.git_config:
+        name: remote.origin.url
+        value: git@github.com:allycoops80/laptop-ansible.git
+        scope: local
+        repo: "/home/{{ the_user }}/code/laptop-ansible"
+      tags: repos
