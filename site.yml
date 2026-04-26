@@ -553,6 +553,19 @@
         NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
       tags: claude_code
 
+    # ── AWS Session Manager Plugin ────────────────────────────────────────
+    - name: Download AWS Session Manager plugin deb
+      get_url:
+        url: https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb
+        dest: /tmp/session-manager-plugin.deb
+        mode: "0644"
+      tags: ssm_plugin
+
+    - name: Install AWS Session Manager plugin
+      apt:
+        deb: /tmp/session-manager-plugin.deb
+      tags: ssm_plugin
+
     # ── NFS Mounts ───────────────────────────────────────────────────────
     - name: Install nfs-common
       apt:
