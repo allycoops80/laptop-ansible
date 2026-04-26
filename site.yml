@@ -445,6 +445,11 @@
         state: present
       tags: tilix
 
+    # ── Howdy (face unlock) ───────────────────────────────────────────────
+    # NOT SUPPORTED on Ubuntu 26.04: the ubuntuhandbook1/howdy PPA is built for
+    # noble (24.04) and its deps (python3-dlib=slimbook9, libopencv*410, libdlib19.1t64)
+    # have no 26.04-compatible packages. Revisit when PPA adds resolute builds.
+
     # ── Claude Code install ───────────────────────────────────────────────
     - name: Ensure per-user npm prefix exists
       become: true
@@ -547,6 +552,29 @@
       environment:
         NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
       tags: claude_code
+
+    # ── NFS Mounts ───────────────────────────────────────────────────────
+    - name: Install nfs-common
+      apt:
+        name: nfs-common
+        state: present
+      tags: nfs
+
+    - name: Create /mnt/music mount point
+      file:
+        path: /mnt/music
+        state: directory
+        mode: "0755"
+      tags: nfs
+
+    - name: Add Synology Music NFS mount to fstab
+      ansible.builtin.mount:
+        src: 192.168.0.250:/volume1/Synology/Music
+        path: /mnt/music
+        fstype: nfs
+        opts: defaults,_netdev
+        state: present
+      tags: nfs
 
     # ── Repositories ──────────────────────────────────────────────────────
     # Requires Bitwarden SSH agent to be running and unlocked for SSH repos.
