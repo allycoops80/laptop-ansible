@@ -15,6 +15,12 @@ sso_account_id = 311573342321
 sso_role_name = SystemsStageAccess
 region = eu-west-1
 
+[profile mainstage]
+sso_session = TT_SSO
+sso_account_id = 311573342321
+sso_role_name = SystemsStageAccess
+region = eu-west-1
+
 [profile development]
 sso_session = TT_SSO
 sso_account_id = 502937263541
@@ -52,6 +58,18 @@ sso_role_name = AdministratorAccess
 region = eu-west-1
 
 [profile shared]
+sso_session = TT_SSO
+sso_account_id = 040853210721
+sso_role_name = SystemsSharedAccess
+region = eu-west-1
+
+[profile backend]
+sso_session = TT_SSO
+sso_account_id = 585918076761
+sso_role_name = SystemsSecurityAccess
+region = eu-west-1
+
+[profile sharedservices]
 sso_session = TT_SSO
 sso_account_id = 040853210721
 sso_role_name = SystemsSharedAccess
