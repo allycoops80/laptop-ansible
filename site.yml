@@ -41,6 +41,17 @@
         msg: "the_user resolved to '{{ the_user }}' — run with: sudo ansible-playbook ... -e \"the_user=$USER\""
       when: the_user == 'root' or the_user == ''
 
+    - name: Enable contrib, non-free, and non-free-firmware apt components
+      copy:
+        dest: /etc/apt/sources.list.d/debian-non-free.sources
+        content: |
+          Types: deb
+          URIs: http://deb.debian.org/debian
+          Suites: {{ ansible_distribution_release }} {{ ansible_distribution_release }}-updates
+          Components: contrib non-free non-free-firmware
+          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+        mode: "0644"
+
     - name: Install apt prerequisites
       apt:
         name:
