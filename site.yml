@@ -102,6 +102,15 @@
         state: present
       tags: gh
 
+    # ── Python ───────────────────────────────────────────────────────────
+    - name: Install Python tools
+      apt:
+        name:
+          - python3-venv
+          - python3-pip
+        state: present
+      tags: python
+
     # ── Node.js ───────────────────────────────────────────────────────────
     - name: Install Node.js and npm
       apt:
