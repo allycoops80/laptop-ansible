@@ -286,56 +286,92 @@
         deb: /tmp/obsidian_amd64.deb
       tags: obsidian
 
-    # ── Bitwarden ─────────────────────────────────────────────────────────
-    # No apt repo; Bitwarden's download endpoint redirects to the latest .deb.
-    - name: Download Bitwarden deb
-      get_url:
-        url: https://vault.bitwarden.com/download/?app=desktop&platform=linux&variant=deb
-        dest: /tmp/bitwarden_amd64.deb
+    # ── 1Password ─────────────────────────────────────────────────────────
+    - name: Download 1Password GPG key
+      shell: |
+        curl -sS https://downloads.1password.com/linux/keys/1password.asc \
+          | gpg --dearmor > /usr/share/keyrings/1password-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/1password-archive-keyring.gpg
+      tags: onepassword
+
+    - name: Add 1Password apt repository
+      copy:
+        dest: /etc/apt/sources.list.d/1password.sources
+        content: |
+          Types: deb
+          URIs: https://downloads.1password.com/linux/debian/amd64
+          Suites: stable
+          Components: main
+          Architectures: amd64
+          Signed-By: /usr/share/keyrings/1password-archive-keyring.gpg
         mode: "0644"
-      tags: bitwarden
+      tags: onepassword
 
-    - name: Install Bitwarden
+    - name: Add 1Password debsig policy directory
+      file:
+        path: /etc/debsig/policies/AC2D62742012EA22
+        state: directory
+        mode: "0755"
+      tags: onepassword
+
+    - name: Download 1Password debsig policy
+      get_url:
+        url: https://downloads.1password.com/linux/debian/debsig/1password.pol
+        dest: /etc/debsig/policies/AC2D62742012EA22/1password.pol
+        mode: "0644"
+      tags: onepassword
+
+    - name: Add 1Password debsig keyring directory
+      file:
+        path: /usr/share/debsig/keyrings/AC2D62742012EA22
+        state: directory
+        mode: "0755"
+      tags: onepassword
+
+    - name: Download 1Password debsig keyring
+      shell: |
+        curl -sS https://downloads.1password.com/linux/keys/1password.asc \
+          | gpg --dearmor > /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
+      args:
+        creates: /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
+      tags: onepassword
+
+    - name: Install 1Password desktop and CLI
       apt:
-        deb: /tmp/bitwarden_amd64.deb
-      tags: bitwarden
+        name:
+          - 1password
+          - 1password-cli
+        update_cache: true
+        state: present
+      tags: onepassword
 
-    - name: Install Bitwarden CLI (bw)
-      become: true
-      become_user: "{{ the_user }}"
-      npm:
-        name: "@bitwarden/cli"
-        global: true
-      environment:
-        NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
-      tags: bitwarden
-
-    # ── Bitwarden SSH agent ────────────────────────────────────────────────
-    # After install: open Bitwarden → Settings → SSH Agent → enable it,
-    # then add SSH keys as "SSH Key" vault items.
-    # Bitwarden creates the socket at ~/.bitwarden-ssh-agent.sock when running.
-    - name: Configure SSH to use Bitwarden agent socket
+    # ── 1Password SSH agent ────────────────────────────────────────────────
+    # After install: open 1Password → Settings → Developer → SSH Agent → enable it,
+    # then add SSH keys as "SSH Key" items in the vault.
+    # 1Password creates the socket at ~/.1password/agent.sock when running.
+    - name: Configure SSH to use 1Password agent socket
       become: true
       become_user: "{{ the_user }}"
       blockinfile:
         path: "/home/{{ the_user }}/.ssh/config"
         create: true
         mode: "0600"
-        marker: "# {mark} ANSIBLE MANAGED — BITWARDEN SSH AGENT"
+        marker: "# {mark} ANSIBLE MANAGED — 1PASSWORD SSH AGENT"
         block: |
           Host *
-            IdentityAgent ~/.bitwarden-ssh-agent.sock
-      tags: bitwarden
+            IdentityAgent ~/.1password/agent.sock
+      tags: onepassword
 
-    - name: Export SSH_AUTH_SOCK for Bitwarden agent in .bashrc
+    - name: Export SSH_AUTH_SOCK for 1Password agent in .bashrc
       become: true
       become_user: "{{ the_user }}"
       blockinfile:
         path: "/home/{{ the_user }}/.bashrc"
-        marker: "# {mark} ANSIBLE MANAGED — BITWARDEN SSH AGENT"
+        marker: "# {mark} ANSIBLE MANAGED — 1PASSWORD SSH AGENT"
         block: |
-          export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
-      tags: bitwarden
+          export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
+      tags: onepassword
 
     # ── OpenTofu ──────────────────────────────────────────────────────────
     - name: Download OpenTofu native GPG key
@@ -579,8 +615,8 @@
       tags: nfs
 
     # ── Repositories ──────────────────────────────────────────────────────
-    # Requires Bitwarden SSH agent to be running and unlocked for SSH repos.
-    # Run separately after completing Bitwarden setup:
+    # Requires 1Password SSH agent to be running and unlocked for SSH repos.
+    # Run separately after completing 1Password setup:
     #   sudo -E ansible-playbook -i inventory.ini site.yml --tags repos
     - name: Create ~/code directory
       become: true
