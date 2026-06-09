@@ -438,17 +438,6 @@
         NPM_CONFIG_PREFIX: "/home/{{ the_user }}/.npm-global"
       tags: awscdk
 
-    # ── Tilix ─────────────────────────────────────────────────────────────
-    - name: Install Tilix
-      apt:
-        name: tilix
-        state: present
-      tags: tilix
-
-    # ── Howdy (face unlock) ───────────────────────────────────────────────
-    # NOT SUPPORTED on Ubuntu 26.04: the ubuntuhandbook1/howdy PPA is built for
-    # noble (24.04) and its deps (python3-dlib=slimbook9, libopencv*410, libdlib19.1t64)
-    # have no 26.04-compatible packages. Revisit when PPA adds resolute builds.
 
     # ── Claude Code install ───────────────────────────────────────────────
     - name: Ensure per-user npm prefix exists
