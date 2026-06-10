@@ -13,9 +13,6 @@
 
   vars:
     the_user: "{{ lookup('env','SUDO_USER') | default(lookup('env','USER'), true) }}"
-    # Thorium CPU variant — AVX2 suits Intel/AMD since ~2013.
-    # Use AVX for older hardware, SSE4/SSE3 for anything pre-2013.
-    thorium_variant: "AVX2"
     repos:
       # Traveltek
       - git@github.com:Traveltek/app-travelshops.git
@@ -56,6 +53,7 @@
       apt:
         name:
           - curl
+          - wget
           - gpg
           - apt-transport-https
           - ca-certificates
@@ -242,37 +240,29 @@
         deb: /tmp/zoom_amd64.deb
       tags: zoom
 
-    # ── Thorium Browser ───────────────────────────────────────────────────
-    # Thorium has no apt repo; fetch the latest .deb from GitHub releases.
-    - name: Get latest Thorium release metadata
-      uri:
-        url: https://api.github.com/repos/Alex313031/Thorium/releases/latest
-        headers:
-          Accept: application/vnd.github.v3+json
-        return_content: true
-      register: thorium_release
-      tags: thorium
+    # ── Brave Browser ─────────────────────────────────────────────────────
+    - name: Download Brave Browser GPG key
+      shell: |
+        curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
+          https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/brave-browser-archive-keyring.gpg
+      tags: brave
 
-    - name: Resolve Thorium deb download URL
-      set_fact:
-        thorium_deb_url: >-
-          {{ thorium_release.json.assets
-             | selectattr('name', 'search', '_' + thorium_variant + '.deb')
-             | map(attribute='browser_download_url')
-             | first }}
-      tags: thorium
-
-    - name: Download Thorium deb
-      get_url:
-        url: "{{ thorium_deb_url }}"
-        dest: /tmp/thorium_amd64.deb
+    - name: Add Brave Browser apt repository
+      copy:
+        dest: /etc/apt/sources.list.d/brave-browser-release.list
+        content: |
+          deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main
         mode: "0644"
-      tags: thorium
+      tags: brave
 
-    - name: Install Thorium Browser
+    - name: Install Brave Browser
       apt:
-        deb: /tmp/thorium_amd64.deb
-      tags: thorium
+        name: brave-browser
+        update_cache: true
+        state: present
+      tags: brave
 
     # ── Obsidian ──────────────────────────────────────────────────────────
     # No apt repo; fetch the latest .deb from GitHub releases.
