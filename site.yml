@@ -50,7 +50,7 @@
         msg: >-
           Unsupported OS family '{{ ansible_os_family }}' — this playbook only
           supports Debian/Ubuntu and Fedora.
-      when: ansible_os_family not in ['Debian', 'Fedora']
+      when: ansible_os_family not in ['Debian', 'RedHat']
 
     - name: Debian/Ubuntu prerequisites
       include_tasks: tasks/debian/prerequisites.yml
@@ -58,7 +58,7 @@
 
     - name: Fedora prerequisites
       include_tasks: tasks/fedora/prerequisites.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
 
   tasks:
 
@@ -70,7 +70,7 @@
 
     - name: Install git (Fedora)
       include_tasks: tasks/fedora/git.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: git
 
     - name: Configure git identity
@@ -93,7 +93,7 @@
 
     - name: Install GitHub CLI (Fedora)
       include_tasks: tasks/fedora/gh.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: gh
 
     # ── Python ───────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@
 
     - name: Install Python tools (Fedora)
       include_tasks: tasks/fedora/python.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: python
 
     # ── Node.js ───────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@
 
     - name: Install Node.js and npm (Fedora)
       include_tasks: tasks/fedora/nodejs.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: nodejs
 
     # ── VS Code ───────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@
 
     - name: Install VS Code (Fedora)
       include_tasks: tasks/fedora/vscode.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: vscode
 
     # ── Slack ─────────────────────────────────────────────────────────────
@@ -137,7 +137,7 @@
 
     - name: Install Slack (Fedora)
       include_tasks: tasks/fedora/slack.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: slack
 
     # ── Claude Desktop ────────────────────────────────────────────────────
@@ -157,7 +157,7 @@
 
     - name: Install Zoom (Fedora)
       include_tasks: tasks/fedora/zoom.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: zoom
 
     # ── Brave Browser ─────────────────────────────────────────────────────
@@ -168,7 +168,7 @@
 
     - name: Install Brave Browser (Fedora)
       include_tasks: tasks/fedora/brave.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: brave
 
     # ── Obsidian ──────────────────────────────────────────────────────────
@@ -179,7 +179,7 @@
 
     - name: Install Obsidian (Fedora)
       include_tasks: tasks/fedora/obsidian.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: obsidian
 
     # ── 1Password ─────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@
 
     - name: Install 1Password (Fedora)
       include_tasks: tasks/fedora/onepassword.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: onepassword
 
     # ── 1Password SSH agent ────────────────────────────────────────────────
@@ -228,7 +228,7 @@
 
     - name: Install OpenTofu (Fedora)
       include_tasks: tasks/fedora/tofu.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: tofu
 
     # ── AWS CLI v2 ──────────────────────────────────────────────────────────
@@ -239,7 +239,7 @@
 
     - name: Install AWS CLI v2 (Fedora)
       include_tasks: tasks/fedora/awscli.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: awscli
 
     # ── OpenVPN 3 ────────────────────────────────────────────────────────
@@ -250,7 +250,7 @@
 
     - name: Install OpenVPN 3 (Fedora)
       include_tasks: tasks/fedora/openvpn3.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: openvpn3
 
     # ── AWS CDK ───────────────────────────────────────────────────────────
@@ -377,7 +377,7 @@
 
     - name: Install AWS Session Manager plugin (Fedora)
       include_tasks: tasks/fedora/ssm_plugin.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: ssm_plugin
 
     # ── NFS Mounts ───────────────────────────────────────────────────────
@@ -388,7 +388,7 @@
 
     - name: Configure NFS mounts (Fedora)
       include_tasks: tasks/fedora/nfs.yml
-      when: ansible_os_family == "Fedora"
+      when: ansible_os_family == "RedHat"
       tags: nfs
 
     # ── Repositories ──────────────────────────────────────────────────────
