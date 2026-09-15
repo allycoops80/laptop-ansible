@@ -18,7 +18,7 @@ else
     abort "Cannot detect OS: /etc/os-release not found."
 fi
 
-case "$ID_LIKE $ID" in
+case "${ID_LIKE:-} $ID" in
     *debian*|*ubuntu*)
         info "Installing git and ansible (apt)..."
         sudo apt-get update -qq
