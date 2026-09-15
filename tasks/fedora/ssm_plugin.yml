@@ -1,0 +1,13 @@
+---
+# ── AWS Session Manager Plugin ────────────────────────────────────────
+- name: Download AWS Session Manager plugin rpm
+  get_url:
+    url: https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm
+    dest: /tmp/session-manager-plugin.rpm
+    mode: "0644"
+
+- name: Install AWS Session Manager plugin
+  dnf:
+    name: /tmp/session-manager-plugin.rpm
+    disable_gpg_check: true
+    state: present

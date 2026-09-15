@@ -1,0 +1,30 @@
+---
+# ── VS Code ───────────────────────────────────────────────────────────
+- name: Download Microsoft GPG key (armoured)
+  get_url:
+    url: https://packages.microsoft.com/keys/microsoft.asc
+    dest: /tmp/microsoft.asc
+    mode: "0644"
+
+- name: Dearmor Microsoft GPG key
+  shell: gpg --dearmor < /tmp/microsoft.asc > /usr/share/keyrings/microsoft.gpg
+  args:
+    creates: /usr/share/keyrings/microsoft.gpg
+
+- name: Add VS Code apt repository
+  copy:
+    dest: /etc/apt/sources.list.d/vscode.sources
+    content: |
+      Types: deb
+      URIs: https://packages.microsoft.com/repos/code
+      Suites: stable
+      Components: main
+      Architectures: amd64
+      Signed-By: /usr/share/keyrings/microsoft.gpg
+    mode: "0644"
+
+- name: Install VS Code
+  apt:
+    name: code
+    update_cache: true
+    state: present

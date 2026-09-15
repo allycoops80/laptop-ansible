@@ -1,0 +1,30 @@
+---
+# ── Obsidian ──────────────────────────────────────────────────────────
+# No dnf repo; fetch the latest .rpm from GitHub releases.
+- name: Get latest Obsidian release metadata
+  uri:
+    url: https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest
+    headers:
+      Accept: application/vnd.github.v3+json
+    return_content: true
+  register: obsidian_release
+
+- name: Resolve Obsidian rpm download URL
+  set_fact:
+    obsidian_rpm_url: >-
+      {{ obsidian_release.json.assets
+         | selectattr('name', 'search', 'x86_64.rpm')
+         | map(attribute='browser_download_url')
+         | first }}
+
+- name: Download Obsidian rpm
+  get_url:
+    url: "{{ obsidian_rpm_url }}"
+    dest: /tmp/obsidian_x86_64.rpm
+    mode: "0644"
+
+- name: Install Obsidian
+  dnf:
+    name: /tmp/obsidian_x86_64.rpm
+    disable_gpg_check: true
+    state: present

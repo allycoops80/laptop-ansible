@@ -1,0 +1,26 @@
+---
+# ── Claude Desktop ────────────────────────────────────────────────────
+# Unofficial Debian packaging: https://github.com/aaddrick/claude-desktop-debian
+- name: Download Claude Desktop GPG key
+  shell: |
+    curl -fsSL https://aaddrick.github.io/claude-desktop-debian/KEY.gpg \
+      | gpg --dearmor > /usr/share/keyrings/claude-desktop.gpg
+  args:
+    creates: /usr/share/keyrings/claude-desktop.gpg
+
+- name: Add Claude Desktop apt repository
+  copy:
+    dest: /etc/apt/sources.list.d/claude-desktop.sources
+    content: |
+      Types: deb
+      URIs: https://pkg.claude-desktop-debian.dev
+      Suites: stable
+      Components: main
+      Signed-By: /usr/share/keyrings/claude-desktop.gpg
+    mode: "0644"
+
+- name: Install Claude Desktop
+  apt:
+    name: claude-desktop
+    update_cache: true
+    state: present

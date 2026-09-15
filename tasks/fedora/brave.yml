@@ -1,0 +1,13 @@
+---
+# ── Brave Browser ─────────────────────────────────────────────────────
+- name: Add Brave Browser rpm repository
+  get_url:
+    url: https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+    dest: /etc/yum.repos.d/brave-browser.repo
+    mode: "0644"
+
+- name: Install Brave Browser
+  dnf:
+    name: brave-browser
+    update_cache: true
+    state: present

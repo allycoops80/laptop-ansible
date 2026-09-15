@@ -1,0 +1,16 @@
+---
+# ── OpenVPN 3 ────────────────────────────────────────────────────────
+# openvpn3-linux has no official Fedora dnf repo; it is distributed via the
+# upstream maintainer's Copr project. Verify this Copr repo still tracks
+# Fedora 44 before relying on it (Copr repos can lag new Fedora releases,
+# same class of caveat as the Ubuntu "noble" note on the Debian side).
+- name: Enable openvpn3-linux Copr repository
+  ansible.builtin.command: dnf -y copr enable dsommers/openvpn3-linux
+  args:
+    creates: /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:dsommers:openvpn3-linux.repo
+
+- name: Install OpenVPN 3
+  dnf:
+    name: openvpn3
+    update_cache: true
+    state: present

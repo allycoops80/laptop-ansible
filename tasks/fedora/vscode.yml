@@ -1,0 +1,30 @@
+---
+# ── VS Code ───────────────────────────────────────────────────────────
+- name: Download Microsoft GPG key (armoured)
+  get_url:
+    url: https://packages.microsoft.com/keys/microsoft.asc
+    dest: /tmp/microsoft.asc
+    mode: "0644"
+
+- name: Dearmor Microsoft GPG key
+  shell: gpg --dearmor < /tmp/microsoft.asc > /etc/pki/rpm-gpg/microsoft.gpg
+  args:
+    creates: /etc/pki/rpm-gpg/microsoft.gpg
+
+- name: Add VS Code yum repository
+  copy:
+    dest: /etc/yum.repos.d/vscode.repo
+    content: |
+      [code]
+      name=Visual Studio Code
+      baseurl=https://packages.microsoft.com/yumrepos/vscode
+      enabled=1
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/microsoft.gpg
+    mode: "0644"
+
+- name: Install VS Code
+  dnf:
+    name: code
+    update_cache: true
+    state: present

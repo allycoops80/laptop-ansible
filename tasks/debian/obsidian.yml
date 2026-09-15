@@ -1,0 +1,28 @@
+---
+# ── Obsidian ──────────────────────────────────────────────────────────
+# No apt repo; fetch the latest .deb from GitHub releases.
+- name: Get latest Obsidian release metadata
+  uri:
+    url: https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest
+    headers:
+      Accept: application/vnd.github.v3+json
+    return_content: true
+  register: obsidian_release
+
+- name: Resolve Obsidian deb download URL
+  set_fact:
+    obsidian_deb_url: >-
+      {{ obsidian_release.json.assets
+         | selectattr('name', 'search', 'amd64.deb')
+         | map(attribute='browser_download_url')
+         | first }}
+
+- name: Download Obsidian deb
+  get_url:
+    url: "{{ obsidian_deb_url }}"
+    dest: /tmp/obsidian_amd64.deb
+    mode: "0644"
+
+- name: Install Obsidian
+  apt:
+    deb: /tmp/obsidian_amd64.deb

@@ -12,9 +12,26 @@ abort() { echo "ERROR: $*" >&2; exit 1; }
 [[ $EUID -eq 0 ]] && abort "Run as your normal user, not root (sudo is invoked internally)."
 
 # ── Prerequisites ──────────────────────────────────────────────────────────
-info "Installing git and ansible..."
-sudo apt-get update -qq
-sudo apt-get install -y git ansible
+if [[ -f /etc/os-release ]]; then
+    . /etc/os-release
+else
+    abort "Cannot detect OS: /etc/os-release not found."
+fi
+
+case "$ID_LIKE $ID" in
+    *debian*|*ubuntu*)
+        info "Installing git and ansible (apt)..."
+        sudo apt-get update -qq
+        sudo apt-get install -y git ansible
+        ;;
+    *fedora*)
+        info "Installing git and ansible (dnf)..."
+        sudo dnf install -y git ansible
+        ;;
+    *)
+        abort "Unsupported OS '$ID' — this repo supports Debian/Ubuntu and Fedora only."
+        ;;
+esac
 
 # ── Repo ───────────────────────────────────────────────────────────────────
 if [[ -d "$REPO_DIR/.git" ]]; then

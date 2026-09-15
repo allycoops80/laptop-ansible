@@ -1,0 +1,29 @@
+---
+# ── Slack ─────────────────────────────────────────────────────────────
+# Slack does not publish a native Fedora dnf repo; packagecloud hosts an
+# Enterprise-Linux (rpm) channel alongside the Debian one used on apt hosts.
+- name: Import Slack (packagecloud) GPG key
+  rpm_key:
+    key: https://packagecloud.io/slacktechnologies/slack/gpgkey
+    state: present
+
+- name: Add Slack yum repository
+  copy:
+    dest: /etc/yum.repos.d/slack.repo
+    content: |
+      [slack]
+      name=Slack
+      baseurl=https://packagecloud.io/slacktechnologies/slack/el/7/$basearch
+      repo_gpgcheck=1
+      gpgcheck=0
+      enabled=1
+      gpgkey=https://packagecloud.io/slacktechnologies/slack/gpgkey
+      sslverify=1
+      metadata_expire=300
+    mode: "0644"
+
+- name: Install Slack
+  dnf:
+    name: slack
+    update_cache: true
+    state: present

@@ -1,0 +1,29 @@
+---
+# ── OpenTofu ──────────────────────────────────────────────────────────
+- name: Download OpenTofu native GPG key
+  shell: |
+    curl -fsSL https://get.opentofu.org/opentofu.gpg \
+      > /etc/apt/keyrings/opentofu.gpg
+  args:
+    creates: /etc/apt/keyrings/opentofu.gpg
+
+- name: Download OpenTofu repo GPG key
+  shell: |
+    curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey \
+      | gpg --no-tty --batch --dearmor -o /etc/apt/keyrings/opentofu-repo.gpg
+  args:
+    creates: /etc/apt/keyrings/opentofu-repo.gpg
+
+- name: Add OpenTofu apt repository
+  copy:
+    dest: /etc/apt/sources.list.d/opentofu.list
+    content: |
+      deb [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main
+      deb-src [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main
+    mode: "0644"
+
+- name: Install OpenTofu
+  apt:
+    name: tofu
+    update_cache: true
+    state: present

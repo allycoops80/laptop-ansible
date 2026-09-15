@@ -2,30 +2,45 @@
 
 Ansible playbook to provision a new laptop with standard developer tools.
 
+Supports **Debian/Ubuntu** (apt) and **Fedora 44** (dnf). The OS family is
+detected automatically at run time via the `ansible_os_family` fact — no
+extra variable or flag is needed. Per-app installation logic lives under
+`tasks/debian/*.yml` and `tasks/fedora/*.yml`, included conditionally from
+`site.yml`; OS-independent tasks (git identity, Claude Code config, AWS
+config, npm-based installs, repo cloning) stay directly in `site.yml`.
+
 ## What gets installed
 
-| Tool | Method |
-|---|---|
-| git | apt |
-| GitHub CLI (`gh`) | cli.github.com apt repo |
-| Node.js + npm | apt |
-| VS Code | Microsoft apt repo |
-| Slack | Packagecloud apt repo |
-| Claude Desktop | aaddrick unofficial Debian repo |
-| Claude Code CLI | npm (`@anthropic-ai/claude-code`) |
-| Bitwarden Desktop | bitwarden.com download |
-| Bitwarden CLI (`bw`) | npm (`@bitwarden/cli`) |
-| Zoom | zoom.us download |
-| Thorium Browser | GitHub releases (Alex313031/Thorium) |
-| Obsidian | GitHub releases (obsidianmd/obsidian-releases) |
-| OpenTofu | packages.opentofu.org apt repo |
-| OpenVPN 3 | packages.openvpn.net apt repo |
-| AWS CLI v2 | awscli.amazonaws.com installer |
-| AWS CDK | npm (`aws-cdk`) |
-| Tilix | apt |
-| AWS CLI config | files/aws_config (SSO profiles, no credentials) |
+| Tool | Debian/Ubuntu | Fedora |
+|---|---|---|
+| git | apt | dnf |
+| GitHub CLI (`gh`) | cli.github.com apt repo | cli.github.com rpm repo |
+| Python tools (pip, venv) | apt | dnf (venv ships with Fedora's `python3`) |
+| Node.js + npm | apt | dnf |
+| VS Code | Microsoft apt repo | Microsoft rpm repo |
+| Slack | Packagecloud apt repo | Packagecloud rpm (Enterprise Linux) repo |
+| Claude Desktop | aaddrick unofficial Debian repo | **not installed** — no Fedora packaging exists from that source |
+| Claude Code CLI | npm (`@anthropic-ai/claude-code`) | npm (`@anthropic-ai/claude-code`) |
+| 1Password Desktop + CLI | 1Password apt repo | 1Password rpm repo |
+| Zoom | zoom.us `.deb` download | zoom.us `.rpm` download |
+| Brave Browser | Brave apt repo | Brave rpm repo |
+| Obsidian | GitHub releases (`.deb` asset) | GitHub releases (`.rpm` asset) |
+| OpenTofu | packages.opentofu.org apt repo | get.opentofu.org rpm repo |
+| OpenVPN 3 | packages.openvpn.net apt repo | community Copr repo (`dsommers/openvpn3-linux`) |
+| AWS CLI v2 | awscli.amazonaws.com installer | awscli.amazonaws.com installer (same, arch-based) |
+| AWS CDK | npm (`aws-cdk`) | npm (`aws-cdk`) |
+| AWS Session Manager Plugin | AWS `.deb` download | AWS `.rpm` download |
+| NFS client | `nfs-common` (apt) | `nfs-utils` (dnf) |
+| AWS CLI config | files/aws_config (SSO profiles, no credentials) | files/aws_config (SSO profiles, no credentials) |
 
-SSH agent is configured to use Bitwarden — see [SSH keys](#ssh-keys) below.
+SSH agent is configured to use 1Password — see [SSH keys](#ssh-keys) below.
+
+### Known gap: Claude Desktop on Fedora
+
+Claude Desktop is installed via an unofficial Debian-only packaging project
+(`aaddrick/claude-desktop-debian`). It has no RPM/Fedora equivalent, so the
+`claude_desktop` tag is a no-op on Fedora hosts — it does not fail, it simply
+installs nothing. Revisit if a trustworthy Fedora package becomes available.
 
 ## Bootstrap a new laptop
 
@@ -45,7 +60,7 @@ bash ~/code/laptop-ansible/bootstrap.sh
 
 The script installs `git` and `ansible` via apt, clones this repo, then runs the playbook under `sudo`. You will be prompted once for your sudo password.
 
-Repository cloning is skipped during bootstrap (SSH agent must be configured first). Run manually once Bitwarden is set up:
+Repository cloning is skipped during bootstrap (SSH agent must be configured first). Run manually once 1Password is set up:
 
 ```bash
 cd ~/code/laptop-ansible
@@ -59,7 +74,9 @@ cd ~/code/laptop-ansible
 sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER" --tags zoom
 ```
 
-Available tags: `git`, `gh`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `claude_config`, `bitwarden`, `zoom`, `thorium`, `obsidian`, `tofu`, `openvpn3`, `awscli`, `awscdk`, `tilix`, `aws`, `repos`
+Available tags: `git`, `gh`, `python`, `nodejs`, `vscode`, `slack`, `claude_desktop`, `claude_code`, `claude_config`, `onepassword`, `zoom`, `brave`, `obsidian`, `tofu`, `openvpn3`, `awscli`, `awscdk`, `ssm_plugin`, `nfs`, `aws`, `repos`
+
+Every tag works the same way on both Debian/Ubuntu and Fedora, except `claude_desktop`, which only does anything on Debian/Ubuntu (see [Known gap](#known-gap-claude-desktop-on-fedora) above).
 
 ## Why `sudo ansible-playbook` instead of `ansible-playbook -K`
 

@@ -1,0 +1,14 @@
+---
+# ── Zoom ──────────────────────────────────────────────────────────────
+# Zoom has no stable dnf repo; download the latest .rpm directly.
+- name: Download Zoom rpm
+  get_url:
+    url: https://zoom.us/client/latest/zoom_x86_64.rpm
+    dest: /tmp/zoom_x86_64.rpm
+    mode: "0644"
+
+- name: Install Zoom
+  dnf:
+    name: /tmp/zoom_x86_64.rpm
+    disable_gpg_check: true
+    state: present

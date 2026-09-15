@@ -1,0 +1,13 @@
+---
+# ── GitHub CLI ───────────────────────────────────────────────────────
+- name: Add GitHub CLI rpm repository
+  get_url:
+    url: https://cli.github.com/packages/rpm/gh-cli.repo
+    dest: /etc/yum.repos.d/gh-cli.repo
+    mode: "0644"
+
+- name: Install GitHub CLI
+  dnf:
+    name: gh
+    update_cache: true
+    state: present

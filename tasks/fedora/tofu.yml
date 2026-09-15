@@ -1,0 +1,13 @@
+---
+# ── OpenTofu ──────────────────────────────────────────────────────────
+- name: Add OpenTofu yum repository
+  get_url:
+    url: https://get.opentofu.org/opentofu.repo
+    dest: /etc/yum.repos.d/opentofu.repo
+    mode: "0644"
+
+- name: Install OpenTofu
+  dnf:
+    name: tofu
+    update_cache: true
+    state: present

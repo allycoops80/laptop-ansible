@@ -1,0 +1,27 @@
+---
+# ── OpenVPN 3 ────────────────────────────────────────────────────────
+- name: Download OpenVPN 3 GPG key
+  shell: |
+    curl -fsSL https://packages.openvpn.net/packages-repo.gpg \
+      | gpg --dearmor > /etc/apt/keyrings/openvpn.gpg
+  args:
+    creates: /etc/apt/keyrings/openvpn.gpg
+
+- name: Add OpenVPN 3 apt repository
+  copy:
+    dest: /etc/apt/sources.list.d/openvpn3.sources
+    content: |
+      Types: deb
+      URIs: https://packages.openvpn.net/openvpn3/debian
+      Suites: noble
+      Components: main
+      Architectures: amd64
+      Signed-By: /etc/apt/keyrings/openvpn.gpg
+    mode: "0644"
+  # Ubuntu 26.04 (resolute) not yet in OpenVPN repo; noble packages are compatible
+
+- name: Install OpenVPN 3
+  apt:
+    name: openvpn3
+    update_cache: true
+    state: present

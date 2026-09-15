@@ -1,0 +1,20 @@
+---
+# ── NFS Mounts ───────────────────────────────────────────────────────
+- name: Install nfs-utils
+  dnf:
+    name: nfs-utils
+    state: present
+
+- name: Create /mnt/music mount point
+  file:
+    path: /mnt/music
+    state: directory
+    mode: "0755"
+
+- name: Add Synology Music NFS mount to fstab
+  ansible.builtin.mount:
+    src: 192.168.0.250:/volume1/Synology/Music
+    path: /mnt/music
+    fstype: nfs
+    opts: defaults,_netdev
+    state: present

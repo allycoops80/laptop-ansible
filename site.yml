@@ -1,10 +1,17 @@
 ---
 # Bootstrap (one-time, on new laptop):
 #   bash bootstrap.sh
+# bootstrap.sh detects Debian/Ubuntu (apt) vs Fedora (dnf) to install git and
+# ansible before cloning this repo and running the playbook.
 #
 # Run (pass the_user so sudo doesn't shadow $USER with root):
 #   sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER"
 #   sudo ansible-playbook -i inventory.ini site.yml -e "the_user=$USER" --tags git,nodejs,vscode
+#
+# OS family (Debian/Ubuntu vs Fedora) is detected automatically at run time
+# via the ansible_os_family fact — no extra variable needed. Per-app tasks
+# live under tasks/debian/ and tasks/fedora/; see openspec/specs/
+# workstation-provisioning for the behavior contract.
 
 - name: Laptop developer tools
   hosts: local
@@ -38,35 +45,32 @@
         msg: "the_user resolved to '{{ the_user }}' — run with: sudo ansible-playbook ... -e \"the_user=$USER\""
       when: the_user == 'root' or the_user == ''
 
-    - name: Enable contrib, non-free, and non-free-firmware apt components
-      copy:
-        dest: /etc/apt/sources.list.d/debian-non-free.sources
-        content: |
-          Types: deb
-          URIs: http://deb.debian.org/debian
-          Suites: {{ ansible_distribution_release }} {{ ansible_distribution_release }}-updates
-          Components: contrib non-free non-free-firmware
-          Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-        mode: "0644"
+    - name: Verify OS family is supported
+      fail:
+        msg: >-
+          Unsupported OS family '{{ ansible_os_family }}' — this playbook only
+          supports Debian/Ubuntu and Fedora.
+      when: ansible_os_family not in ['Debian', 'Fedora']
 
-    - name: Install apt prerequisites
-      apt:
-        name:
-          - curl
-          - wget
-          - gpg
-          - apt-transport-https
-          - ca-certificates
-        update_cache: true
-        state: present
+    - name: Debian/Ubuntu prerequisites
+      include_tasks: tasks/debian/prerequisites.yml
+      when: ansible_os_family == "Debian"
+
+    - name: Fedora prerequisites
+      include_tasks: tasks/fedora/prerequisites.yml
+      when: ansible_os_family == "Fedora"
 
   tasks:
 
     # ── Git ───────────────────────────────────────────────────────────────
-    - name: Install git
-      apt:
-        name: git
-        state: present
+    - name: Install git (Debian/Ubuntu)
+      include_tasks: tasks/debian/git.yml
+      when: ansible_os_family == "Debian"
+      tags: git
+
+    - name: Install git (Fedora)
+      include_tasks: tasks/fedora/git.yml
+      when: ansible_os_family == "Fedora"
       tags: git
 
     - name: Configure git identity
@@ -82,278 +86,111 @@
       tags: git
 
     # ── GitHub CLI ───────────────────────────────────────────────────────
-    - name: Download GitHub CLI GPG key
-      shell: |
-        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-          > /usr/share/keyrings/githubcli-archive-keyring.gpg
-        chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-      args:
-        creates: /usr/share/keyrings/githubcli-archive-keyring.gpg
+    - name: Install GitHub CLI (Debian/Ubuntu)
+      include_tasks: tasks/debian/gh.yml
+      when: ansible_os_family == "Debian"
       tags: gh
 
-    - name: Add GitHub CLI apt repository
-      copy:
-        dest: /etc/apt/sources.list.d/github-cli.sources
-        content: |
-          Types: deb
-          URIs: https://cli.github.com/packages
-          Suites: stable
-          Components: main
-          Architectures: amd64
-          Signed-By: /usr/share/keyrings/githubcli-archive-keyring.gpg
-        mode: "0644"
-      tags: gh
-
-    - name: Install GitHub CLI
-      apt:
-        name: gh
-        update_cache: true
-        state: present
+    - name: Install GitHub CLI (Fedora)
+      include_tasks: tasks/fedora/gh.yml
+      when: ansible_os_family == "Fedora"
       tags: gh
 
     # ── Python ───────────────────────────────────────────────────────────
-    - name: Install Python tools
-      apt:
-        name:
-          - python3-venv
-          - python3-pip
-        state: present
+    - name: Install Python tools (Debian/Ubuntu)
+      include_tasks: tasks/debian/python.yml
+      when: ansible_os_family == "Debian"
+      tags: python
+
+    - name: Install Python tools (Fedora)
+      include_tasks: tasks/fedora/python.yml
+      when: ansible_os_family == "Fedora"
       tags: python
 
     # ── Node.js ───────────────────────────────────────────────────────────
-    - name: Install Node.js and npm
-      apt:
-        name:
-          - nodejs
-          - npm
-        state: present
+    - name: Install Node.js and npm (Debian/Ubuntu)
+      include_tasks: tasks/debian/nodejs.yml
+      when: ansible_os_family == "Debian"
+      tags: nodejs
+
+    - name: Install Node.js and npm (Fedora)
+      include_tasks: tasks/fedora/nodejs.yml
+      when: ansible_os_family == "Fedora"
       tags: nodejs
 
     # ── VS Code ───────────────────────────────────────────────────────────
-    - name: Download Microsoft GPG key (armoured)
-      get_url:
-        url: https://packages.microsoft.com/keys/microsoft.asc
-        dest: /tmp/microsoft.asc
-        mode: "0644"
+    - name: Install VS Code (Debian/Ubuntu)
+      include_tasks: tasks/debian/vscode.yml
+      when: ansible_os_family == "Debian"
       tags: vscode
 
-    - name: Dearmor Microsoft GPG key
-      shell: gpg --dearmor < /tmp/microsoft.asc > /usr/share/keyrings/microsoft.gpg
-      args:
-        creates: /usr/share/keyrings/microsoft.gpg
-      tags: vscode
-
-    - name: Add VS Code apt repository
-      copy:
-        dest: /etc/apt/sources.list.d/vscode.sources
-        content: |
-          Types: deb
-          URIs: https://packages.microsoft.com/repos/code
-          Suites: stable
-          Components: main
-          Architectures: amd64
-          Signed-By: /usr/share/keyrings/microsoft.gpg
-        mode: "0644"
-      tags: vscode
-
-    - name: Install VS Code
-      apt:
-        name: code
-        update_cache: true
-        state: present
+    - name: Install VS Code (Fedora)
+      include_tasks: tasks/fedora/vscode.yml
+      when: ansible_os_family == "Fedora"
       tags: vscode
 
     # ── Slack ─────────────────────────────────────────────────────────────
-    - name: Download Slack (packagecloud) GPG key
-      shell: |
-        curl -fsSL https://packagecloud.io/slacktechnologies/slack/gpgkey \
-          | gpg --dearmor > /usr/share/keyrings/slack.gpg
-      args:
-        creates: /usr/share/keyrings/slack.gpg
+    - name: Install Slack (Debian/Ubuntu)
+      include_tasks: tasks/debian/slack.yml
+      when: ansible_os_family == "Debian"
       tags: slack
 
-    - name: Remove legacy Slack apt list file
-      file:
-        path: /etc/apt/sources.list.d/slack.list
-        state: absent
-      tags: slack
-
-    - name: Add Slack apt repository
-      copy:
-        dest: /etc/apt/sources.list.d/slack.sources
-        content: |
-          Types: deb
-          URIs: https://packagecloud.io/slacktechnologies/slack/debian/
-          Suites: jessie
-          Components: main
-          Signed-By: /usr/share/keyrings/slack.gpg
-        mode: "0644"
-      tags: slack
-
-    - name: Install Slack
-      apt:
-        name: slack-desktop
-        update_cache: true
-        state: present
+    - name: Install Slack (Fedora)
+      include_tasks: tasks/fedora/slack.yml
+      when: ansible_os_family == "Fedora"
       tags: slack
 
     # ── Claude Desktop ────────────────────────────────────────────────────
     # Unofficial Debian packaging: https://github.com/aaddrick/claude-desktop-debian
-    - name: Download Claude Desktop GPG key
-      shell: |
-        curl -fsSL https://aaddrick.github.io/claude-desktop-debian/KEY.gpg \
-          | gpg --dearmor > /usr/share/keyrings/claude-desktop.gpg
-      args:
-        creates: /usr/share/keyrings/claude-desktop.gpg
-      tags: claude_desktop
-
-    - name: Add Claude Desktop apt repository
-      copy:
-        dest: /etc/apt/sources.list.d/claude-desktop.sources
-        content: |
-          Types: deb
-          URIs: https://pkg.claude-desktop-debian.dev
-          Suites: stable
-          Components: main
-          Signed-By: /usr/share/keyrings/claude-desktop.gpg
-        mode: "0644"
-      tags: claude_desktop
-
-    - name: Install Claude Desktop
-      apt:
-        name: claude-desktop
-        update_cache: true
-        state: present
+    # No Fedora equivalent exists from that source — intentionally skipped on
+    # Fedora (see proposal.md / openspec/changes/add-fedora-support).
+    - name: Install Claude Desktop (Debian/Ubuntu)
+      include_tasks: tasks/debian/claude_desktop.yml
+      when: ansible_os_family == "Debian"
       tags: claude_desktop
 
     # ── Zoom ──────────────────────────────────────────────────────────────
-    # Zoom has no stable apt repo; download the latest .deb directly.
-    - name: Download Zoom deb
-      get_url:
-        url: https://zoom.us/client/latest/zoom_amd64.deb
-        dest: /tmp/zoom_amd64.deb
-        mode: "0644"
+    - name: Install Zoom (Debian/Ubuntu)
+      include_tasks: tasks/debian/zoom.yml
+      when: ansible_os_family == "Debian"
       tags: zoom
 
-    - name: Install Zoom
-      apt:
-        deb: /tmp/zoom_amd64.deb
+    - name: Install Zoom (Fedora)
+      include_tasks: tasks/fedora/zoom.yml
+      when: ansible_os_family == "Fedora"
       tags: zoom
 
     # ── Brave Browser ─────────────────────────────────────────────────────
-    - name: Download Brave Browser GPG key
-      shell: |
-        curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg \
-          https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
-      args:
-        creates: /usr/share/keyrings/brave-browser-archive-keyring.gpg
+    - name: Install Brave Browser (Debian/Ubuntu)
+      include_tasks: tasks/debian/brave.yml
+      when: ansible_os_family == "Debian"
       tags: brave
 
-    - name: Add Brave Browser apt repository
-      copy:
-        dest: /etc/apt/sources.list.d/brave-browser-release.list
-        content: |
-          deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main
-        mode: "0644"
-      tags: brave
-
-    - name: Install Brave Browser
-      apt:
-        name: brave-browser
-        update_cache: true
-        state: present
+    - name: Install Brave Browser (Fedora)
+      include_tasks: tasks/fedora/brave.yml
+      when: ansible_os_family == "Fedora"
       tags: brave
 
     # ── Obsidian ──────────────────────────────────────────────────────────
-    # No apt repo; fetch the latest .deb from GitHub releases.
-    - name: Get latest Obsidian release metadata
-      uri:
-        url: https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest
-        headers:
-          Accept: application/vnd.github.v3+json
-        return_content: true
-      register: obsidian_release
+    - name: Install Obsidian (Debian/Ubuntu)
+      include_tasks: tasks/debian/obsidian.yml
+      when: ansible_os_family == "Debian"
       tags: obsidian
 
-    - name: Resolve Obsidian deb download URL
-      set_fact:
-        obsidian_deb_url: >-
-          {{ obsidian_release.json.assets
-             | selectattr('name', 'search', 'amd64.deb')
-             | map(attribute='browser_download_url')
-             | first }}
-      tags: obsidian
-
-    - name: Download Obsidian deb
-      get_url:
-        url: "{{ obsidian_deb_url }}"
-        dest: /tmp/obsidian_amd64.deb
-        mode: "0644"
-      tags: obsidian
-
-    - name: Install Obsidian
-      apt:
-        deb: /tmp/obsidian_amd64.deb
+    - name: Install Obsidian (Fedora)
+      include_tasks: tasks/fedora/obsidian.yml
+      when: ansible_os_family == "Fedora"
       tags: obsidian
 
     # ── 1Password ─────────────────────────────────────────────────────────
-    - name: Download 1Password GPG key
-      shell: |
-        curl -sS https://downloads.1password.com/linux/keys/1password.asc \
-          | gpg --dearmor > /usr/share/keyrings/1password-archive-keyring.gpg
-      args:
-        creates: /usr/share/keyrings/1password-archive-keyring.gpg
+    - name: Install 1Password (Debian/Ubuntu)
+      include_tasks: tasks/debian/onepassword.yml
+      when: ansible_os_family == "Debian"
       tags: onepassword
 
-    - name: Add 1Password apt repository
-      copy:
-        dest: /etc/apt/sources.list.d/1password.sources
-        content: |
-          Types: deb
-          URIs: https://downloads.1password.com/linux/debian/amd64
-          Suites: stable
-          Components: main
-          Architectures: amd64
-          Signed-By: /usr/share/keyrings/1password-archive-keyring.gpg
-        mode: "0644"
-      tags: onepassword
-
-    - name: Add 1Password debsig policy directory
-      file:
-        path: /etc/debsig/policies/AC2D62742012EA22
-        state: directory
-        mode: "0755"
-      tags: onepassword
-
-    - name: Download 1Password debsig policy
-      get_url:
-        url: https://downloads.1password.com/linux/debian/debsig/1password.pol
-        dest: /etc/debsig/policies/AC2D62742012EA22/1password.pol
-        mode: "0644"
-      tags: onepassword
-
-    - name: Add 1Password debsig keyring directory
-      file:
-        path: /usr/share/debsig/keyrings/AC2D62742012EA22
-        state: directory
-        mode: "0755"
-      tags: onepassword
-
-    - name: Download 1Password debsig keyring
-      shell: |
-        curl -sS https://downloads.1password.com/linux/keys/1password.asc \
-          | gpg --dearmor > /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
-      args:
-        creates: /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
-      tags: onepassword
-
-    - name: Install 1Password desktop and CLI
-      apt:
-        name:
-          - 1password
-          - 1password-cli
-        update_cache: true
-        state: present
+    - name: Install 1Password (Fedora)
+      include_tasks: tasks/fedora/onepassword.yml
+      when: ansible_os_family == "Fedora"
       tags: onepassword
 
     # ── 1Password SSH agent ────────────────────────────────────────────────
@@ -384,92 +221,36 @@
       tags: onepassword
 
     # ── OpenTofu ──────────────────────────────────────────────────────────
-    - name: Download OpenTofu native GPG key
-      shell: |
-        curl -fsSL https://get.opentofu.org/opentofu.gpg \
-          > /etc/apt/keyrings/opentofu.gpg
-      args:
-        creates: /etc/apt/keyrings/opentofu.gpg
+    - name: Install OpenTofu (Debian/Ubuntu)
+      include_tasks: tasks/debian/tofu.yml
+      when: ansible_os_family == "Debian"
       tags: tofu
 
-    - name: Download OpenTofu repo GPG key
-      shell: |
-        curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey \
-          | gpg --no-tty --batch --dearmor -o /etc/apt/keyrings/opentofu-repo.gpg
-      args:
-        creates: /etc/apt/keyrings/opentofu-repo.gpg
+    - name: Install OpenTofu (Fedora)
+      include_tasks: tasks/fedora/tofu.yml
+      when: ansible_os_family == "Fedora"
       tags: tofu
 
-    - name: Add OpenTofu apt repository
-      copy:
-        dest: /etc/apt/sources.list.d/opentofu.list
-        content: |
-          deb [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main
-          deb-src [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main
-        mode: "0644"
-      tags: tofu
+    # ── AWS CLI v2 ──────────────────────────────────────────────────────────
+    - name: Install AWS CLI v2 (Debian/Ubuntu)
+      include_tasks: tasks/debian/awscli.yml
+      when: ansible_os_family == "Debian"
+      tags: awscli
 
-    - name: Install OpenTofu
-      apt:
-        name: tofu
-        update_cache: true
-        state: present
-      tags: tofu
-
-    - name: Install AWS CLI v2
-      block:
-        - name: Ensure unzip is present
-          ansible.builtin.apt:
-            name: unzip
-            state: present
-            update_cache: yes
-
-        - name: Download AWS CLI v2 installer
-          ansible.builtin.get_url:
-            url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_facts['architecture'] }}.zip"
-            dest: /tmp/awscliv2.zip
-            mode: "0644"
-
-        - name: Unpack installer
-          ansible.builtin.unarchive:
-            src: /tmp/awscliv2.zip
-            dest: /tmp/
-            remote_src: yes
-
-        - name: Run AWS CLI installer
-          ansible.builtin.command: /tmp/aws/install --update
-          args:
-            creates: /usr/local/bin/aws
+    - name: Install AWS CLI v2 (Fedora)
+      include_tasks: tasks/fedora/awscli.yml
+      when: ansible_os_family == "Fedora"
       tags: awscli
 
     # ── OpenVPN 3 ────────────────────────────────────────────────────────
-    - name: Download OpenVPN 3 GPG key
-      shell: |
-        curl -fsSL https://packages.openvpn.net/packages-repo.gpg \
-          | gpg --dearmor > /etc/apt/keyrings/openvpn.gpg
-      args:
-        creates: /etc/apt/keyrings/openvpn.gpg
+    - name: Install OpenVPN 3 (Debian/Ubuntu)
+      include_tasks: tasks/debian/openvpn3.yml
+      when: ansible_os_family == "Debian"
       tags: openvpn3
 
-    - name: Add OpenVPN 3 apt repository
-      copy:
-        dest: /etc/apt/sources.list.d/openvpn3.sources
-        content: |
-          Types: deb
-          URIs: https://packages.openvpn.net/openvpn3/debian
-          Suites: noble
-          Components: main
-          Architectures: amd64
-          Signed-By: /etc/apt/keyrings/openvpn.gpg
-        mode: "0644"
-      tags: openvpn3
-      # Ubuntu 26.04 (resolute) not yet in OpenVPN repo; noble packages are compatible
-
-    - name: Install OpenVPN 3
-      apt:
-        name: openvpn3
-        update_cache: true
-        state: present
+    - name: Install OpenVPN 3 (Fedora)
+      include_tasks: tasks/fedora/openvpn3.yml
+      when: ansible_os_family == "Fedora"
       tags: openvpn3
 
     # ── AWS CDK ───────────────────────────────────────────────────────────
@@ -589,39 +370,25 @@
       tags: claude_code
 
     # ── AWS Session Manager Plugin ────────────────────────────────────────
-    - name: Download AWS Session Manager plugin deb
-      get_url:
-        url: https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb
-        dest: /tmp/session-manager-plugin.deb
-        mode: "0644"
+    - name: Install AWS Session Manager plugin (Debian/Ubuntu)
+      include_tasks: tasks/debian/ssm_plugin.yml
+      when: ansible_os_family == "Debian"
       tags: ssm_plugin
 
-    - name: Install AWS Session Manager plugin
-      apt:
-        deb: /tmp/session-manager-plugin.deb
+    - name: Install AWS Session Manager plugin (Fedora)
+      include_tasks: tasks/fedora/ssm_plugin.yml
+      when: ansible_os_family == "Fedora"
       tags: ssm_plugin
 
     # ── NFS Mounts ───────────────────────────────────────────────────────
-    - name: Install nfs-common
-      apt:
-        name: nfs-common
-        state: present
+    - name: Configure NFS mounts (Debian/Ubuntu)
+      include_tasks: tasks/debian/nfs.yml
+      when: ansible_os_family == "Debian"
       tags: nfs
 
-    - name: Create /mnt/music mount point
-      file:
-        path: /mnt/music
-        state: directory
-        mode: "0755"
-      tags: nfs
-
-    - name: Add Synology Music NFS mount to fstab
-      ansible.builtin.mount:
-        src: 192.168.0.250:/volume1/Synology/Music
-        path: /mnt/music
-        fstype: nfs
-        opts: defaults,_netdev
-        state: present
+    - name: Configure NFS mounts (Fedora)
+      include_tasks: tasks/fedora/nfs.yml
+      when: ansible_os_family == "Fedora"
       tags: nfs
 
     # ── Repositories ──────────────────────────────────────────────────────

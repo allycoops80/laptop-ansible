@@ -1,0 +1,10 @@
+---
+- name: Install dnf prerequisites
+  dnf:
+    name:
+      - curl
+      - wget
+      - gnupg2
+      - ca-certificates
+      - dnf-plugins-core
+    state: present

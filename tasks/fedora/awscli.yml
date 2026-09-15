@@ -1,0 +1,24 @@
+---
+# ── AWS CLI v2 ──────────────────────────────────────────────────────────
+- name: Ensure unzip is present
+  ansible.builtin.dnf:
+    name: unzip
+    state: present
+    update_cache: yes
+
+- name: Download AWS CLI v2 installer
+  ansible.builtin.get_url:
+    url: "https://awscli.amazonaws.com/awscli-exe-linux-{{ ansible_facts['architecture'] }}.zip"
+    dest: /tmp/awscliv2.zip
+    mode: "0644"
+
+- name: Unpack installer
+  ansible.builtin.unarchive:
+    src: /tmp/awscliv2.zip
+    dest: /tmp/
+    remote_src: yes
+
+- name: Run AWS CLI installer
+  ansible.builtin.command: /tmp/aws/install --update
+  args:
+    creates: /usr/local/bin/aws

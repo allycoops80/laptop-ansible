@@ -1,0 +1,8 @@
+---
+# ── Python ───────────────────────────────────────────────────────────
+- name: Install Python tools
+  apt:
+    name:
+      - python3-venv
+      - python3-pip
+    state: present

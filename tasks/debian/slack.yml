@@ -1,0 +1,30 @@
+---
+# ── Slack ─────────────────────────────────────────────────────────────
+- name: Download Slack (packagecloud) GPG key
+  shell: |
+    curl -fsSL https://packagecloud.io/slacktechnologies/slack/gpgkey \
+      | gpg --dearmor > /usr/share/keyrings/slack.gpg
+  args:
+    creates: /usr/share/keyrings/slack.gpg
+
+- name: Remove legacy Slack apt list file
+  file:
+    path: /etc/apt/sources.list.d/slack.list
+    state: absent
+
+- name: Add Slack apt repository
+  copy:
+    dest: /etc/apt/sources.list.d/slack.sources
+    content: |
+      Types: deb
+      URIs: https://packagecloud.io/slacktechnologies/slack/debian/
+      Suites: jessie
+      Components: main
+      Signed-By: /usr/share/keyrings/slack.gpg
+    mode: "0644"
+
+- name: Install Slack
+  apt:
+    name: slack-desktop
+    update_cache: true
+    state: present
