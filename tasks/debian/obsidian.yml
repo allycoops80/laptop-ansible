@@ -1,19 +1,22 @@
 ---
 # ── Obsidian ──────────────────────────────────────────────────────────
-# No apt repo; fetch the latest .deb from GitHub releases.
-- name: Get latest Obsidian release metadata
+# No apt repo; fetch the latest .deb from GitHub releases. /releases/latest
+# can point at an Android-only release with no .deb asset, so scan the
+# recent releases for the newest one that has one.
+- name: Get recent Obsidian releases metadata
   uri:
-    url: https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest
+    url: https://api.github.com/repos/obsidianmd/obsidian-releases/releases?per_page=10
     headers:
       Accept: application/vnd.github.v3+json
     return_content: true
-  register: obsidian_release
+  register: obsidian_releases
 
 - name: Resolve Obsidian deb download URL
   set_fact:
     obsidian_deb_url: >-
-      {{ obsidian_release.json.assets
-         | selectattr('name', 'search', 'amd64.deb')
+      {{ obsidian_releases.json
+         | map(attribute='assets') | list | flatten
+         | selectattr('name', 'match', 'obsidian_[0-9.]+_amd64\.deb$')
          | map(attribute='browser_download_url')
          | first }}
 
