@@ -1,38 +1,8 @@
 ---
 # ── OpenTofu ──────────────────────────────────────────────────────────
-# get.opentofu.org/opentofu.repo (the old convenience URL) now 404s;
-# write the repo file directly per the official install-opentofu.sh.
-- name: Add OpenTofu yum repository
-  copy:
-    dest: /etc/yum.repos.d/opentofu.repo
-    content: |
-      [opentofu]
-      name=opentofu
-      baseurl=https://packages.opentofu.org/opentofu/tofu/rpm_any/rpm_any/$basearch
-      repo_gpgcheck=1
-      gpgcheck=1
-      enabled=1
-      gpgkey=https://get.opentofu.org/opentofu.asc
-             https://packages.opentofu.org/opentofu/tofu/gpgkey
-      sslverify=1
-      sslcacert=/etc/pki/tls/certs/ca-bundle.crt
-      metadata_expire=300
-
-      [opentofu-source]
-      name=opentofu-source
-      baseurl=https://packages.opentofu.org/opentofu/tofu/rpm_any/rpm_any/SRPMS
-      repo_gpgcheck=1
-      gpgcheck=1
-      enabled=1
-      gpgkey=https://get.opentofu.org/opentofu.asc
-             https://packages.opentofu.org/opentofu/tofu/gpgkey
-      sslverify=1
-      sslcacert=/etc/pki/tls/certs/ca-bundle.crt
-      metadata_expire=300
-    mode: "0644"
-
+# Fedora ships OpenTofu natively as "opentofu" in its own repos — no
+# third-party repo needed (verified against a fedora:44 container).
 - name: Install OpenTofu
   dnf:
-    name: tofu
-    update_cache: true
+    name: opentofu
     state: present
