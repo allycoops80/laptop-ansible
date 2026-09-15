@@ -248,10 +248,13 @@
       when: ansible_os_family == "Debian"
       tags: openvpn3
 
-    - name: Install OpenVPN 3 (Fedora)
-      include_tasks: tasks/fedora/openvpn3.yml
-      when: ansible_os_family == "RedHat"
-      tags: openvpn3
+    # Disabled: the dsommers/openvpn3-linux Copr repo has no fedora-44
+    # build yet (404 on /api_3/rpmrepo/.../fedora-44/, confirmed against a
+    # fedora:44 container). Re-enable once Copr publishes it.
+    # - name: Install OpenVPN 3 (Fedora)
+    #   include_tasks: tasks/fedora/openvpn3.yml
+    #   when: ansible_os_family == "RedHat"
+    #   tags: openvpn3
 
     # ── AWS CDK ───────────────────────────────────────────────────────────
     - name: Install AWS CDK
